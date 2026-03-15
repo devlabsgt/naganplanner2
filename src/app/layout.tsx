@@ -42,8 +42,6 @@ export const metadata: Metadata = {
     apple: "/favicon.ico",
   },
 };
-
-
 export default async function RootLayout({
   children,
 }: Readonly<{
