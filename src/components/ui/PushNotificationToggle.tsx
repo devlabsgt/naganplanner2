@@ -59,8 +59,8 @@ export function PushNotificationToggle() {
         if (!userId) return
         setLoading(true)
         try {
-            if (!('serviceWorker' in navigator)) {
-                alert("Tu navegador no soporta notificaciones push.")
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                alert("Tu navegador no soporta notificaciones push nativas.");
                 return
             }
 

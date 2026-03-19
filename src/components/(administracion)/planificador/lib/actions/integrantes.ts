@@ -3,11 +3,19 @@
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { checkIsJefe } from './core';
+import { sendPushToUsers } from '@/utils/push-utils';
 
 export async function responderInvitacionComision(actividad_id: string, aceptada: boolean, motivo?: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('No autenticado');
+
+  // Obtener información para la notificación antes de los cambios o en paralelo
+  const [resPerfil, resActividad, resEncargados] = await Promise.all([
+    supabase.from('profiles').select('nombre').eq('id', user.id).single(),
+    supabase.from('act_actividades').select('title').eq('id', actividad_id).single(),
+    supabase.from('act_integrantes').select('usuario_id').eq('actividad_id', actividad_id).eq('es_encargado', true)
+  ]);
 
   const { error } = await supabase
     .from('act_integrantes')
@@ -19,7 +27,20 @@ export async function responderInvitacionComision(actividad_id: string, aceptada
     .eq('usuario_id', user.id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/planificador');
+
+  // Notificar a los encargados (excluyendo al que responde si fuera encargado)
+  const encargadosIds = resEncargados.data?.map(e => e.usuario_id).filter(id => id !== user.id) || [];
+  
+  if (encargadosIds.length > 0 && resActividad.data?.title && resPerfil.data?.nombre) {
+    const accion = aceptada ? 'ACEPTADO ✅' : 'RECHAZADO ❌';
+    sendPushToUsers(encargadosIds, {
+      title: `Invitación ${accion}`,
+      body: `${resPerfil.data.nombre} ha ${aceptada ? 'aceptado' : 'rechazado'} la invitación a: ${resActividad.data.title}`,
+      url: "/kore/planificador"
+    }).catch(err => console.error("Error enviando push de respuesta:", err));
+  }
+
+  revalidatePath('/kore/planificador');
 }
 
 export async function removerMiembroComision(actividad_id: string, usuario_id_a_remover: string, motivo: string) {
@@ -46,7 +67,7 @@ export async function removerMiembroComision(actividad_id: string, usuario_id_a_
     .eq('usuario_id', usuario_id_a_remover);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
 
 export async function sustituirMiembroComision(
@@ -60,7 +81,7 @@ export async function sustituirMiembroComision(
   if (!user) throw new Error('No autenticado');
 
   const isJefe = await checkIsJefe(supabase, user.id);
-  const { data: actividad } = await supabase.from('act_actividades').select('created_by').eq('id', actividad_id).single();
+  const { data: actividad } = await supabase.from('act_actividades').select('title, created_by').eq('id', actividad_id).single();
 
   const esAutoGestion = user.id === usuario_id_actual;
 
@@ -82,6 +103,15 @@ export async function sustituirMiembroComision(
 
   if (error) throw new Error(error.message);
 
+  // --- NOTIFICACIÓN PUSH AL NUEVO INTEGRANTE ---
+  if (actividad?.title && nuevo_usuario_id !== user.id) {
+    sendPushToUsers([nuevo_usuario_id], {
+      title: "Nueva Sustitución / Asignación",
+      body: `Has sido asignado a la actividad: ${actividad.title.toUpperCase()}`,
+      url: "/kore/planificador"
+    }).catch(err => console.error("Error enviando push en sustitución:", err));
+  }
+
   // --- REGISTRO DE SUSTITUCIÓN ---
   if (justificacion) {
     const { error: errorLog } = await supabase
@@ -97,7 +127,7 @@ export async function sustituirMiembroComision(
     if (errorLog) console.error('Error al registrar sustitución:', errorLog);
   }
 
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
 
 export async function actualizarChecklistPlanificador(id: string, items: any[]) {
@@ -108,7 +138,7 @@ export async function actualizarChecklistPlanificador(id: string, items: any[]) 
     .eq('id', id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
 
 export async function obtenerRolesExistentes() {

@@ -107,7 +107,7 @@ export async function guardarPlantillaEquipo(
     if (errorInt) throw new Error(errorInt.message);
   }
 
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
 
 export async function eliminarPlantillaEquipo(id: string) {
@@ -132,7 +132,7 @@ export async function eliminarPlantillaEquipo(id: string) {
   const { error } = await supabase.from('act_actividades').delete().eq('id', id);
   
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
 
 export async function cargarMiembrosDePlantilla(plantillaId: string) {

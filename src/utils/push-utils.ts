@@ -1,16 +1,27 @@
 import webpush from "web-push";
-import { createClient } from "@/utils/supabase/server";
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+
+// Helper local para instanciar el cliente con privilegios
+function getAdminClient() {
+  return createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function sendPushToUsers(userIds: string[], payload: { title: string; body: string; url?: string }) {
-    const supabase = await createClient();
+    const supabaseAdmin = getAdminClient();
+
+    const pubKey = (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "").replace(/^["']|["']$/g, '');
+    const privKey = (process.env.VAPID_PRIVATE_KEY || "").replace(/^["']|["']$/g, '');
 
     webpush.setVapidDetails(
         "mailto:soporte@cermad.com",
-        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY as string,
-        process.env.VAPID_PRIVATE_KEY as string
+        pubKey,
+        privKey
     );
 
-    const { data: subscriptions, error } = await supabase
+    const { data: subscriptions, error } = await supabaseAdmin
         .from("push_subscriptions")
         .select("*")
         .in("user_id", userIds);
@@ -42,11 +53,8 @@ export async function sendPushToUsers(userIds: string[], payload: { title: strin
             await webpush.sendNotification(pushSubscription, pushPayload);
         } catch (err: any) {
             if (err.statusCode === 410 || err.statusCode === 404) {
-                // Subscription expired or invalid - using an admin-like client if this was from a client-side call
-                // But here we can use the default supabase client if it has RLS permissions or an admin client
-                // For simplicity, we just log and try to delete
                 console.warn(`Deleting invalid subscription: ${sub.id}`);
-                await supabase.from("push_subscriptions").delete().eq("id", sub.id);
+                await supabaseAdmin.from("push_subscriptions").delete().eq("id", sub.id);
             } else {
                 console.error("Error sending push to endpoint", sub.id, err);
             }
@@ -57,9 +65,9 @@ export async function sendPushToUsers(userIds: string[], payload: { title: strin
 }
 
 export async function sendPushToRoles(roles: string[], payload: { title: string; body: string; url?: string }) {
-    const supabase = await createClient();
+    const supabaseAdmin = getAdminClient();
 
-    const { data: profiles, error } = await supabase
+    const { data: profiles, error } = await supabaseAdmin
         .from("profiles")
         .select("id")
         .in("rol", roles);

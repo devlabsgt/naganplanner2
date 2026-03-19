@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { planificadorFormSchema, PlanificadorForm } from '../zod';
+import { sendPushToUsers } from '@/utils/push-utils';
 
 // --- FUNCIÓN HELPER: VERIFICAR SI ES JEFE O ADMIN ---
 export async function checkIsJefe(supabase: any, userId: string): Promise<boolean> {
@@ -11,22 +12,25 @@ export async function checkIsJefe(supabase: any, userId: string): Promise<boolea
     .select('id')
     .eq('usuario_id', userId)
     .eq('es_jefatura', true);
-    
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('rol')
     .eq('id', userId)
     .single();
-  
+
   const esJefeOperativo = puestosJefatura && puestosJefatura.length > 0;
-  const esSuperAdmin = profile?.rol === 'ADMIN' || profile?.rol === 'SUPER' || profile?.rol === 'RRHH';
+
+  // Normalizar el rol para que sea insensible a mayúsculas/minúsculas
+  const userRole = (profile?.rol || '').toUpperCase();
+  const esSuperAdmin = userRole === 'SUPER';
 
   return esJefeOperativo || esSuperAdmin;
 }
 
 export async function obtenerDatosPlanificador(
   tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas',
-  modulo: 'alabanza' | 'danza' | 'multimedia' | 'todas' 
+  modulo: 'alabanza' | 'danza' | 'multimedia' | 'todas'
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -36,14 +40,14 @@ export async function obtenerDatosPlanificador(
   const { data: rawProfiles } = await supabase
     .from('profiles')
     .select('id, nombre, email, avatar_url, activo, rol');
-  
+
   const perfilesMap = new Map((rawProfiles || []).map((p: any) => [p.id, p]));
   const miPerfil = perfilesMap.get(user.id);
   const isJefe = await checkIsJefe(supabase, user.id);
 
   // 2. Lógica de Filtro por Equipo
-  let teamIds: string[] = [user.id]; 
-  let departamentosEquipo: any[] = []; 
+  let teamIds: string[] = [user.id];
+  let departamentosEquipo: any[] = [];
 
   if (isJefe || tipoVista === 'mi_equipo' || tipoVista === 'todas') {
     let arrayIdsTotales: string[] = [];
@@ -95,8 +99,8 @@ export async function obtenerDatosPlanificador(
             .map(p => p.usuario_id as string);
 
           const miembrosUnicos = miembrosDelDepto.filter(userId => {
-            if (usuariosYaAsignados.has(userId)) return false; 
-            usuariosYaAsignados.add(userId); 
+            if (usuariosYaAsignados.has(userId)) return false;
+            usuariosYaAsignados.add(userId);
             return true;
           });
 
@@ -113,7 +117,7 @@ export async function obtenerDatosPlanificador(
   } else if (tipoVista === 'mi_equipo') {
     queryIntegrantes = queryIntegrantes.in('usuario_id', teamIds);
   }
-  
+
   const { data: actsFiltradas } = await queryIntegrantes;
   const validActIds = actsFiltradas?.map(a => a.actividad_id) || [];
 
@@ -153,7 +157,7 @@ export async function obtenerDatosPlanificador(
 
   const planificadores = rawPlanificadores.map((act: any) => {
     const creador = perfilesMap.get(act.created_by);
-    
+
     const integrantesMapeados = (act.act_integrantes || []).map((int: any) => {
       const perfilInt = perfilesMap.get(int.usuario_id);
       return {
@@ -177,7 +181,7 @@ export async function obtenerDatosPlanificador(
     planificadores,
     usuarios: (rawProfiles || []),
     departamentosEquipo,
-    isJefe 
+    isJefe
   };
 }
 
@@ -205,10 +209,10 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
   }
 
   const payloadActividad: any = {
-    title: tituloMayusculas, 
+    title: tituloMayusculas,
     description: parsed.data.description || null,
     due_date: fechaVencimiento,
-    assigned_to: null, 
+    assigned_to: null,
     checklist: parsed.data.checklist || [],
     modulo: parsed.data.modulo || null,
     status: parsed.data.status,
@@ -223,15 +227,15 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
     if (!tareaActual) throw new Error('Planificador no encontrado');
 
     const esActividadPasada = tareaActual.due_date && new Date(tareaActual.due_date) < new Date();
-    
+
     if (esActividadPasada && !isJefe) {
-       throw new Error('Solo los lideres pueden editar actividades que ya han finalizado (fechas pasadas).');
+      throw new Error('Solo los lideres pueden editar actividades que ya han finalizado (fechas pasadas).');
     }
 
     if (!isJefe) {
       payloadActividad.title = tareaActual.title;
       payloadActividad.due_date = tareaActual.due_date;
-      payloadActividad.modulo = tareaActual.modulo; 
+      payloadActividad.modulo = tareaActual.modulo;
       payloadActividad.status = tareaActual.status;
       payloadActividad.videos_url = tareaActual.videos_url || [];
     }
@@ -241,7 +245,7 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
 
     const { error: errorUpdate } = await supabase.from('act_actividades').update(payloadActividad).eq('id', idEdicion);
     if (errorUpdate) throw new Error(errorUpdate.message);
-    
+
     await supabase.from('act_integrantes').delete().eq('actividad_id', idEdicion);
 
   } else {
@@ -250,21 +254,28 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
       .insert({ ...payloadActividad, created_by: user.id })
       .select('id')
       .single();
-      
+
     if (errorInsert) throw new Error(errorInsert.message);
     actividadId = nuevaActividad.id;
   }
 
   if (actividadId && parsed.data.integrantes.length > 0) {
+    const usuariosANotificar: string[] = [];
+
     const payloadIntegrantes = parsed.data.integrantes.map(int => {
       const existente = integrantesAnteriores.find(ea => ea.usuario_id === int.usuario_id);
-      
+
       let estadoInvitacion = existente ? existente.invitación : null;
       let motivoRechazo = existente ? existente.justificación : null;
 
-      if (int.es_nuevo) {
-         estadoInvitacion = null;
-         motivoRechazo = null;
+      const esNuevoRealmente = int.es_nuevo || !existente;
+
+      if (esNuevoRealmente) {
+        estadoInvitacion = null;
+        motivoRechazo = null;
+        if (int.usuario_id !== user.id) {
+          usuariosANotificar.push(int.usuario_id);
+        }
       }
 
       if (int.usuario_id === user.id && estadoInvitacion === null) {
@@ -284,6 +295,18 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
 
     const { error: errorIntegrantes } = await supabase.from('act_integrantes').insert(payloadIntegrantes);
     if (errorIntegrantes) throw new Error(errorIntegrantes.message);
+
+    if (usuariosANotificar.length > 0) {
+      try {
+        await sendPushToUsers(usuariosANotificar, {
+          title: idEdicion ? "Te han añadido a una actividad" : "Nueva Actividad Asignada",
+          body: `Has sido asignado a la actividad: ${tituloMayusculas}`,
+          url: "/kore/planificador"
+        });
+      } catch (err) {
+        console.error("Error enviando push en planificador:", err);
+      }
+    }
   }
 
   revalidatePath('/admin/planificador');
@@ -309,9 +332,9 @@ export async function eliminarPlanificador(id: string) {
   }
 
   await supabase.from('act_integrantes').delete().eq('actividad_id', id);
-  
+
   const { error } = await supabase.from('act_actividades').delete().eq('id', id);
   if (error) throw new Error(error.message);
-  
-  revalidatePath('/admin/planificador');
+
+  revalidatePath('/kore/planificador');
 }

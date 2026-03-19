@@ -35,7 +35,7 @@ export async function guardarAdjunto(actividad_id: string, archivo: { nombre: st
     .eq('id', actividad_id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
 
 export async function eliminarAdjunto(actividad_id: string, archivoUrl: string) {
@@ -65,7 +65,7 @@ export async function eliminarAdjunto(actividad_id: string, archivoUrl: string) 
     .eq('id', actividad_id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
 
 // ============================================================================
@@ -100,7 +100,7 @@ export async function guardarVideo(actividad_id: string, video: { id: string, no
     .eq('id', actividad_id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
 
 export async function eliminarVideo(actividad_id: string, videoId: string) {
@@ -131,5 +131,5 @@ export async function eliminarVideo(actividad_id: string, videoId: string) {
     .eq('id', actividad_id);
 
   if (error) throw new Error(error.message);
-  revalidatePath('/admin/planificador');
+  revalidatePath('/kore/planificador');
 }
