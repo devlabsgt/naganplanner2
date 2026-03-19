@@ -4,22 +4,29 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 import { flushSync } from "react-dom";
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
 
 interface AnimatedThemeTogglerProps extends React.ComponentPropsWithoutRef<"button"> {
   duration?: number;
 }
+
+import { AnimatePresence, motion } from "framer-motion";
 
 export const AnimatedThemeToggler = ({
   className,
   duration = 400,
   ...props
 }: AnimatedThemeTogglerProps) => {
+  const { setTheme } = useTheme();
   const [isDark, setIsDark] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    setMounted(true);
     const updateTheme = () => {
-      setIsDark(document.documentElement.classList.contains("dark"));
+      const isDarkMode = document.documentElement.classList.contains("dark");
+      setIsDark(isDarkMode);
     };
     updateTheme();
 
@@ -35,10 +42,12 @@ export const AnimatedThemeToggler = ({
   const toggleTheme = useCallback(async () => {
     if (!buttonRef.current) return;
 
+    const newTheme = !isDark;
+    
     // @ts-ignore
     if (!document.startViewTransition) {
-      const newTheme = !isDark;
       setIsDark(newTheme);
+      setTheme(newTheme ? "dark" : "light");
       if (newTheme) document.documentElement.classList.add("dark");
       else document.documentElement.classList.remove("dark");
       localStorage.setItem("theme", newTheme ? "dark" : "light");
@@ -48,8 +57,8 @@ export const AnimatedThemeToggler = ({
     // @ts-ignore
     await document.startViewTransition(() => {
       flushSync(() => {
-        const newTheme = !isDark;
         setIsDark(newTheme);
+        setTheme(newTheme ? "dark" : "light");
         if (newTheme) document.documentElement.classList.add("dark");
         else document.documentElement.classList.remove("dark");
         localStorage.setItem("theme", newTheme ? "dark" : "light");
@@ -80,32 +89,46 @@ export const AnimatedThemeToggler = ({
     );
   }, [isDark, duration]);
 
+  if (!mounted) return (
+    <div className={cn("size-9 sm:size-10 rounded-full", className)} />
+  );
+
   return (
     <button
       ref={buttonRef}
       onClick={toggleTheme}
       className={cn(
-        "flex items-center justify-center gap-4 px-5 py-3 rounded-full border bg-background transition-all hover:bg-muted/40 active:scale-95",
+        "relative flex items-center justify-center size-9 sm:size-10 rounded-full transition-all hover:bg-muted/40 active:scale-90 overflow-hidden",
         className,
       )}
       {...props}
+      title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
     >
-      <Sun
-        className={cn(
-          "size-5 transition-all",
-          !isDark
-            ? "text-yellow-500 fill-yellow-500 scale-110"
-            : "text-muted-foreground opacity-50 scale-100",
+      <AnimatePresence mode="wait" initial={false}>
+        {isDark ? (
+          <motion.div
+            key="moon"
+            initial={{ y: 20, rotate: 40, opacity: 0 }}
+            animate={{ y: 0, rotate: 0, opacity: 1 }}
+            exit={{ y: -20, rotate: -40, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="flex items-center justify-center"
+          >
+            <Moon className="size-[17px] sm:size-[19px] text-yellow-100 fill-yellow-100" />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="sun"
+            initial={{ y: 20, rotate: 40, opacity: 0 }}
+            animate={{ y: 0, rotate: 0, opacity: 1 }}
+            exit={{ y: -20, rotate: -40, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="flex items-center justify-center"
+          >
+            <Sun className="size-[17px] sm:size-[19px] text-yellow-500 fill-yellow-500" />
+          </motion.div>
         )}
-      />
-      <Moon
-        className={cn(
-          "size-5 transition-all",
-          isDark
-            ? "text-yellow-100 fill-yellow-100 scale-110"
-            : "text-muted-foreground opacity-50 scale-100",
-        )}
-      />
+      </AnimatePresence>
     </button>
   );
-};
+}

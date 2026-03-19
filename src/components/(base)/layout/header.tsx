@@ -18,6 +18,8 @@ import { cn } from "@/lib/utils";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { AuroraText } from "@/components/ui/aurora-text";
+import { PushNotificationToggle } from "@/components/ui/PushNotificationToggle";
+import { RefreshButton } from "@/components/ui/RefreshButton";
 
 export default function Header() {
   const user = useUser();
@@ -45,13 +47,13 @@ export default function Header() {
   return (
     <>
       <header className="w-full bg-background transition-all">
-        <div className="mx-auto flex h-24 items-center justify-between px-6 lg:px-12">
+        <div className="mx-auto flex h-24 items-center justify-between pl-3 sm:pl-6 lg:pl-12 pr-2 sm:pr-4 lg:pr-8">
           <div className="flex items-center h-full">
             <Link
               href={user ? "/kore" : "/"}
               className="flex items-center h-full py-2 group"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 sm:gap-4">
                 <img
                   src="/icon.png"
                   alt="Nagan Planner Logo"
@@ -62,16 +64,18 @@ export default function Header() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
+            <RefreshButton />
+            <PushNotificationToggle />
             <AnimatedThemeToggler />
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="flex items-center justify-center rounded-xl p-2.5 text-foreground hover:bg-muted/50 border border-border/50 cursor-pointer"
+              className="flex items-center justify-center rounded-xl p-2 text-foreground hover:bg-muted/50 border border-border/50 cursor-pointer"
             >
               {isOpen ? (
-                <X className="h-6 w-6" />
+                <X className="h-[22.8px] w-[22.8px]" />
               ) : (
-                <Menu className="h-6 w-6" />
+                <Menu className="h-[22.8px] w-[22.8px]" />
               )}
             </button>
           </div>
@@ -176,7 +180,7 @@ export default function Header() {
                     <AuroraText variant="gold">©️</AuroraText> 2026
                   </span>
                   <AuroraText variant="gold">Nagan</AuroraText>
-                  <AuroraText variant="silver">Planner</AuroraText>
+                  <AuroraText variant="planner">Planner</AuroraText>
                   <span className="opacity-40">™️</span>
                 </p>
                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">

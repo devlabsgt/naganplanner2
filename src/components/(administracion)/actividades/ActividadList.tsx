@@ -99,9 +99,11 @@ export default function ActividadList({ initialData, tipoVista }: Props) {
 
 
   // --- HELPERS VISUALES ---
-  const getNombreFecha = (iso: string) => {
-    if (iso === 'sin-fecha') return 'Sin fecha límite';
-    const fechaObj = new Date(iso + 'T12:00:00'); 
+  const getNombreFecha = (isoFormatted: string) => {
+    if (isoFormatted === 'sin-fecha') return 'Sin fecha límite';
+    // isoFormatted viene como YYYY-MM-DD local
+    const [year, month, day] = isoFormatted.split('-').map(Number);
+    const fechaObj = new Date(year, month - 1, day);
     const opciones: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
     return fechaObj.toLocaleDateString('es-ES', opciones);
   };
@@ -118,7 +120,17 @@ export default function ActividadList({ initialData, tipoVista }: Props) {
 
     const map: Record<string, Actividad[]> = {};
     listaFinal.forEach((act) => {
-      const fechaKey = act.due_date ? act.due_date.split('T')[0] : 'sin-fecha';
+      let fechaKey = 'sin-fecha';
+      
+      if (act.due_date) {
+        // En lugar de hacer split('T'), usamos el objeto Date para obtener el año/mes/día LOCAL
+        const d = new Date(act.due_date);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        fechaKey = `${y}-${m}-${day}`;
+      }
+
       if (!map[fechaKey]) map[fechaKey] = [];
       map[fechaKey].push(act);
     });

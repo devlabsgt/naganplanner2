@@ -148,9 +148,11 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
   }, [planificadoresFiltradosRaw]);
 
 
-  const getNombreFecha = (iso: string) => {
-    if (iso === 'sin-fecha') return 'Sin fecha programada';
-    const fechaObj = new Date(iso + 'T12:00:00');
+  const getNombreFecha = (isoFormatted: string) => {
+    if (isoFormatted === 'sin-fecha') return 'Sin fecha programada';
+    // isoFormatted viene como YYYY-MM-DD local
+    const [year, month, day] = isoFormatted.split('-').map(Number);
+    const fechaObj = new Date(year, month - 1, day);
     const opciones: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
     return fechaObj.toLocaleDateString('es-ES', opciones);
   };
@@ -167,7 +169,17 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
 
     const map: Record<string, Planificador[]> = {};
     listaFinal.forEach((plan) => {
-      const fechaKey = plan.due_date ? plan.due_date.split('T')[0] : 'sin-fecha';
+      let fechaKey = 'sin-fecha';
+      
+      if (plan.due_date) {
+        // En lugar de hacer split('T'), usamos el objeto Date para obtener el año/mes/día LOCAL
+        const d = new Date(plan.due_date);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        fechaKey = `${y}-${m}-${day}`;
+      }
+
       if (!map[fechaKey]) map[fechaKey] = [];
       map[fechaKey].push(plan);
     });
