@@ -3,7 +3,7 @@ import PlanificadorList from './PlanificadorList';
 
 interface Props {
   tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas';
-  modulo: 'alabanza' | 'danza' | 'multimedia' | 'todas';
+  modulo: 'alabanza' | 'danza' | 'danza-damas' | 'danza-caballeros' | 'multimedia' | 'todas' | 'reunion' | string;
 }
 
 export default async function GestorPlanificador({ tipoVista, modulo }: Props) {

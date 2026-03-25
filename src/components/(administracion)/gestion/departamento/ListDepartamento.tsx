@@ -332,13 +332,45 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-index: 60; flex items-end sm:items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm p-0 sm:p-4">
-          <div className="bg-white dark:bg-zinc-900 border-t sm:border border-zinc-200 dark:border-zinc-800 rounded-t-2xl sm:rounded-xl shadow-2xl w-full max-w-md p-6 space-y-6 animate-in slide-in-from-bottom sm:zoom-in-95">
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-white">{mode === "crear" ? "Nuevo Departamento" : "Editar Nombre"}</h3>
-            <input value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white p-4 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Escribe aquí..." autoFocus onKeyDown={e => e.key === 'Enter' && handleSave()} />
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
-              <button onClick={closeModal} className="order-2 sm:order-1 px-4 py-3 text-zinc-500 dark:text-zinc-400 font-medium">Cancelar</button>
-              <button onClick={handleSave} className="order-1 sm:order-2 bg-purple-600 text-white px-6 py-3 rounded-lg font-bold">Confirmar</button>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 dark:bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            <div className="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-zinc-950/50">
+              <div>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                  {mode === "crear" ? "Nuevo Departamento" : "Editar Departamento"}
+                </h3>
+                <p className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase tracking-wider">
+                  {mode === "crear" ? "Estructura Organizacional" : "Editar Nombre"}
+                </p>
+              </div>
+              <button onClick={closeModal} className="text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 bg-white dark:bg-zinc-900">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                   Nombre del Departamento
+                </label>
+                <input 
+                  value={nombre} 
+                  onChange={(e) => setNombre(e.target.value)} 
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" 
+                  placeholder="" 
+                  autoFocus 
+                  onKeyDown={e => e.key === 'Enter' && handleSave()} 
+                />
+              </div>
+            </div>
+
+            <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-950/50 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2">
+              <button 
+                onClick={handleSave} 
+                className="px-6 py-2 rounded-lg text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-md active:scale-95 shadow-purple-900/10 dark:shadow-purple-900/20"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
         </div>

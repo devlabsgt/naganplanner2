@@ -23,6 +23,8 @@ interface Props {
   usuarioActualId: string;
   usuarios: Perfil[];
   isJefe: boolean; 
+  modulo: string;
+  tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas';
 }
 
 export default function PlanificadorItem({ 
@@ -31,7 +33,9 @@ export default function PlanificadorItem({
   onToggle, 
   usuarioActualId, 
   usuarios,
-  isJefe 
+  isJefe,
+  modulo,
+  tipoVista 
 }: Props) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   
@@ -78,6 +82,8 @@ export default function PlanificadorItem({
       case 'servicio_especial':
       case 'especial': 
         return 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800';
+      case 'reunion':
+        return 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900/30 dark:text-slate-300 dark:border-slate-800';
       default: 
         return 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-neutral-800 dark:text-gray-400';
     }
@@ -90,6 +96,7 @@ export default function PlanificadorItem({
       case 'ensayo': return 'Ensayo';
       case 'servicio_especial':
       case 'especial': return 'Servicio Especial';
+      case 'reunion': return 'Reunión';
       default: return status || 'General';
     }
   };
@@ -372,6 +379,7 @@ export default function PlanificadorItem({
                         onSustituir={acciones.sustituir}
                         onDarDeBaja={acciones.darDeBaja}
                         isJefe={isJefe}
+                        actividadId={planificador.id}
                       />
                     ))
                   ) : (
@@ -398,7 +406,9 @@ export default function PlanificadorItem({
           usuarios={usuarios}
           usuarioActualId={usuarioActualId}
           planificadorEditar={planificador}
-          isJefe={isJefe} 
+          isJefe={isJefe}
+          modulo={modulo}
+          tipoVista={tipoVista}
         />
       )}
     </>

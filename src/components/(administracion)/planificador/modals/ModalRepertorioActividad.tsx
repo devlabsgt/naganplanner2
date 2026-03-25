@@ -227,9 +227,9 @@ export default function ModalRepertorioActividad({ isOpen, onClose, songs, activ
                       </div>
                       
                       {/* Fila del Director (Móvil) */}
-                      <div className="bg-[#1a1a1a] border-t border-[#2a2624] p-3 flex items-center justify-between">
-                         <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-2 flex items-center gap-1.5">
-                           <User size={12} className="text-[#d6a738]" /> Director:
+                      <div className="bg-[#1a1a1a] border-t border-[#2a2624] px-4 py-2.5 flex items-center justify-start gap-3">
+                         <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest flex items-center gap-1.5 shrink-0">
+                           <User size={12} className="text-[#d6a738]" /> DIRECTOR:
                          </span>
                          <DirectorSelector 
                             song={song} 
@@ -300,7 +300,7 @@ function DirectorSelector({
       <PopoverPrimitive.Trigger 
         disabled={disabled}
         className={cn(
-          "w-full flex items-center justify-center gap-2 p-1.5 rounded-lg border transition-all text-[11px] font-bold outline-none",
+          "w-fit min-w-[100px] flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-[10px] font-bold outline-none",
           song.director_id 
              ? "bg-[#d6a738]/10 border-[#d6a738]/30 text-[#f4ebc3] hover:border-[#d6a738]" 
              : "bg-transparent border-dashed border-gray-600/50 text-gray-500 hover:border-gray-400 hover:text-gray-300",
@@ -309,11 +309,11 @@ function DirectorSelector({
         )}
       >
         {isLoading ? (
-          <Loader2 size={14} className="animate-spin text-[#d6a738]" />
+          <Loader2 size={13} className="animate-spin text-[#d6a738]" />
         ) : song.director_nombre ? (
           <>
-            <User size={12} className="text-[#d6a738] shrink-0" /> 
-            <span className="truncate max-w-[120px]">{song.director_nombre}</span>
+            <User size={11} className="text-[#d6a738] shrink-0" /> 
+            <span className="truncate max-w-[80px]">{song.director_nombre}</span>
           </>
         ) : (
           <span className="opacity-70">{disabled ? 'Sin asignar' : 'Asignar...'}</span>

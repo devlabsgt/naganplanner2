@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Save, Sparkles, Loader2, Trash2, Layers, Tag, Users, UserPlus, ClipboardList, Dices } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { X, Save, Sparkles, Loader2, Trash2, Layers, Tag, Users, UserPlus, ClipboardList, Dices, Building2, Briefcase } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { usePlanificadorMutations, useGestorEquipos } from '../lib/hooks';
 import { PlanificadorForm, planificadorFormSchema, Perfil, Planificador, ChecklistItem, VideoAdjunto } from '../lib/zod';
@@ -12,6 +12,34 @@ import { SeccionChecklist } from './SeccionChecklist';
 import { SeccionEquipo, IntegranteUI } from './SeccionEquipo';
 import GestorEquipos from './GestorEquipos';
 
+// ... eliminamos la interface de arriba y la unificamos abajo
+
+const MODULOS_DISPONIBLES = [
+  { value: 'alabanza', label: 'Alabanza' },
+  { value: 'danza-damas', label: 'Danza Damas' },
+  { value: 'danza-caballeros', label: 'Danza Caballeros' },
+  { value: 'multimedia', label: 'Multimedia' },
+  { value: 'reunion', label: 'Reunión' },
+];
+
+const TIPOS_SERVICIO = [
+  { value: 'servicio', label: 'Servicio' },
+  { value: 'ensayo', label: 'Ensayo' },
+  { value: 'servicio_especial', label: 'Servicio Especial' },
+  { value: 'reunion', label: 'Reunión' },
+];
+
+type ModuloType = 'alabanza' | 'danza' | 'danza-damas' | 'danza-caballeros' | 'multimedia' | 'reunion';
+type StatusType = 'servicio' | 'ensayo' | 'servicio_especial' | 'reunion';
+type ModoAsignacion = 'INDIVIDUAL' | 'EQUIPO' | 'DEPARTAMENTO';
+
+type DeptoEquipo = {
+  id: string;
+  nombre: string;
+  miembros: string[];
+  parent_id?: string | null;
+};
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -19,31 +47,27 @@ interface Props {
   usuarioActualId: string;
   planificadorEditar?: Planificador | null;
   isJefe: boolean;
-  modulo?: 'alabanza' | 'danza' | 'multimedia' | 'todas';
+  modulo: 'alabanza' | 'danza' | 'danza-damas' | 'danza-caballeros' | 'multimedia' | 'todas' | string;
+  tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas';
+  departamentosEquipo?: DeptoEquipo[];
 }
 
-const MODULOS_DISPONIBLES = [
-  { value: 'alabanza', label: 'Alabanza' },
-  { value: 'danza', label: 'Danza' },
-  { value: 'multimedia', label: 'Multimedia' },
-];
-
-const TIPOS_SERVICIO = [
-  { value: 'servicio', label: 'Servicio' },
-  { value: 'ensayo', label: 'Ensayo' },
-  { value: 'servicio_especial', label: 'Servicio Especial' },
-];
-
-type ModuloType = 'alabanza' | 'danza' | 'multimedia';
-type StatusType = 'servicio' | 'ensayo' | 'servicio_especial';
-type ModoAsignacion = 'INDIVIDUAL' | 'EQUIPO';
-
-export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioActualId, planificadorEditar, isJefe, modulo }: Props) {
+export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioActualId, planificadorEditar, isJefe, modulo, tipoVista, departamentosEquipo = [] }: Props) {
   const { guardar, eliminar } = usePlanificadorMutations();
   const { cargarMiembros, plantillas } = useGestorEquipos();
 
   const isEditing = !!planificadorEditar;
   const isModuloLocked = modulo && modulo !== 'todas';
+  const isAdminGlobalView = tipoVista === 'todas';
+  const isReunionView = modulo === 'reunion';
+  // Tanto la vista global ("todas") como el módulo específico de reunión
+  // fuerzan el modo reunión: se auto-asigna el módulo y el estado.
+  const isReunionMode = isAdminGlobalView || isReunionView;
+
+  // En modo reunión, solo mostramos opciones de reunión/ensayo.
+  // En el resto (alabanza, danza, etc.), excluimos reunión.
+  const modulosVisibles = MODULOS_DISPONIBLES.filter(m => isReunionMode ? m.value === 'reunion' : m.value !== 'reunion');
+  const serviciosVisibles = TIPOS_SERVICIO.filter(t => isReunionMode ? (t.value === 'reunion' || t.value === 'ensayo') : t.value !== 'reunion');
 
   // --- ESTADOS ---
   const [title, setTitle] = useState('');
@@ -59,9 +83,57 @@ export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioAc
 
   const [isGestorOpen, setIsGestorOpen] = useState(false);
   const [isRandomLoading, setIsRandomLoading] = useState(false);
-
   // Estado para recordar el último índice aleatorio y evitar repeticiones
   const [lastRandomIndex, setLastRandomIndex] = useState<number | null>(null);
+
+  // --- FILTRO DE USUARIOS POR GÉNERO ---
+  const usuariosDisponibles = useMemo(() => {
+    if (tipoVista === 'mis_actividades') {
+      if (selectedModulo === 'danza-damas') {
+        return usuarios.filter(u => u.genero?.toLowerCase() === 'femenino');
+      }
+      if (selectedModulo === 'danza-caballeros') {
+        return usuarios.filter(u => u.genero?.toLowerCase() === 'masculino');
+      }
+    }
+    return usuarios;
+  }, [usuarios, selectedModulo, tipoVista]);
+
+  // --- ORDEN DE JERARQUÍA PARA EL SELECTOR ---
+  const departamentosOrdenados = useMemo(() => {
+    if (!departamentosEquipo || departamentosEquipo.length === 0) return [];
+    
+    // Convertir el array de departamentos en un mapa para búsqueda rápida
+    const mapa = new Map<string, any>();
+    departamentosEquipo.forEach(d => {
+      mapa.set(d.id, { ...d, children: [] });
+    });
+
+    // Separar en raíces (padres principales) e hijos
+    const roots: any[] = [];
+    mapa.forEach(d => {
+      if (d.parent_id && mapa.has(d.parent_id)) {
+        mapa.get(d.parent_id).children.push(d);
+      } else {
+        roots.push(d);
+      }
+    });
+
+    const flattened: (DeptoEquipo & { level: number })[] = [];
+    
+    // Función recursiva para aplanar respetando la jerarquía
+    const flatten = (node: any, level: number) => {
+      flattened.push({ ...node, level });
+      if (node.children) {
+        node.children.forEach((child: any) => flatten(child, level + 1));
+      }
+    };
+
+    // Comenzar aplanar desde las raíces
+    roots.forEach(root => flatten(root, 0));
+
+    return flattened;
+  }, [departamentosEquipo]);
 
   // BLOQUEO DE SCROLL
   useEffect(() => {
@@ -86,7 +158,7 @@ export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioAc
         setDescription(planificadorEditar.description || '');
         setSelectedModulo((planificadorEditar.modulo as ModuloType) || 'alabanza');
         const statusDB = planificadorEditar.status as StatusType;
-        setSelectedStatus(statusDB && ['servicio', 'ensayo', 'servicio_especial'].includes(statusDB) ? statusDB : 'servicio');
+        setSelectedStatus(statusDB && ['servicio', 'ensayo', 'servicio_especial', 'reunion'].includes(statusDB) ? statusDB : 'servicio');
 
         if (planificadorEditar.due_date) {
           const d = new Date(planificadorEditar.due_date);
@@ -114,9 +186,9 @@ export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioAc
         setChecklist([]);
         setVideosUrl([]);
         setModoAsignacion('INDIVIDUAL');
-        const modPorDefecto = (isModuloLocked ? modulo : 'alabanza') as ModuloType;
-        setSelectedModulo(modPorDefecto);
-        setSelectedStatus('servicio');
+        const defaultMod = isReunionMode ? 'reunion' : (isModuloLocked ? (modulo === 'todas' ? 'alabanza' : modulo) : 'alabanza');
+        setSelectedModulo(defaultMod as ModuloType);
+        setSelectedStatus(isReunionMode ? 'reunion' : 'servicio');
         const yo = usuarios.find(u => u.id === usuarioActualId);
         setIntegrantes(yo ? [{ usuario_id: yo.id, nombre: yo.nombre, avatar_url: yo.avatar_url, es_encargado: true, rol: '', is_new: true }] : []);
       }
@@ -253,33 +325,43 @@ export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioAc
                 </h2>
 
                 <div className="flex items-center gap-2 ml-auto sm:ml-4 flex-wrap justify-end">
-                  <div className="relative group">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
-                      <Tag size={14} />
+                  {/* Si es Reunión Mode (Vista Administrador TODAS o módulo Reunión), mostramos badge. Si no, selectores. */}
+                  {isReunionMode ? (
+                    <div className="animate-in fade-in flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <Tag size={14} className="text-blue-500" />
+                      <span className="text-xs font-bold uppercase tracking-wide text-blue-700 dark:text-blue-400">Reunión / Evento</span>
                     </div>
-                    <select
-                      value={selectedStatus}
-                      onChange={(e) => setSelectedStatus(e.target.value as StatusType)}
-                      disabled={guardar.isPending}
-                      className="appearance-none pl-9 pr-8 py-1.5 text-xs font-bold uppercase tracking-wide bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-transparent hover:border-gray-300 dark:hover:border-neutral-600 rounded-lg cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-60"
-                    >
-                      {TIPOS_SERVICIO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="relative group animate-in fade-in">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                          <Tag size={14} />
+                        </div>
+                        <select
+                          value={selectedStatus}
+                          onChange={(e) => setSelectedStatus(e.target.value as StatusType)}
+                          disabled={guardar.isPending}
+                          className="appearance-none pl-9 pr-8 py-1.5 text-xs font-bold uppercase tracking-wide bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-transparent hover:border-gray-300 dark:hover:border-neutral-600 rounded-lg cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-60"
+                        >
+                          {serviciosVisibles.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </select>
+                      </div>
 
-                  <div className="relative group">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
-                      <Layers size={14} />
-                    </div>
-                    <select
-                      value={selectedModulo}
-                      onChange={(e) => setSelectedModulo(e.target.value as ModuloType)}
-                      disabled={!!isModuloLocked || guardar.isPending}
-                      className="appearance-none pl-9 pr-8 py-1.5 text-xs font-bold uppercase tracking-wide bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-transparent hover:border-gray-300 dark:hover:border-neutral-600 rounded-lg cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-60"
-                    >
-                      {MODULOS_DISPONIBLES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                    </select>
-                  </div>
+                      <div className="relative group animate-in fade-in">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                          <Layers size={14} />
+                        </div>
+                        <select
+                          value={selectedModulo}
+                          onChange={(e) => setSelectedModulo(e.target.value as ModuloType)}
+                          disabled={!!isModuloLocked || guardar.isPending}
+                          className="appearance-none pl-9 pr-8 py-1.5 text-xs font-bold uppercase tracking-wide bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300 border border-transparent hover:border-gray-300 dark:hover:border-neutral-600 rounded-lg cursor-pointer outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-60"
+                        >
+                          {modulosVisibles.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -332,7 +414,7 @@ export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioAc
                     </div>
 
                     {/* Controles de Asignación */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+                    <div className="flex flex-wrap items-center justify-between gap-3 w-full">
 
                       {/* Switch de Modo */}
                       <div className="flex bg-gray-100 dark:bg-neutral-800 p-1 rounded-xl w-full sm:w-fit border border-gray-200 dark:border-neutral-700">
@@ -350,6 +432,16 @@ export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioAc
                         >
                           <Users size={14} /> Equipos
                         </button>
+                        
+                        {isAdminGlobalView && (
+                          <button
+                            type="button"
+                            onClick={() => setModoAsignacion('DEPARTAMENTO')}
+                            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${modoAsignacion === 'DEPARTAMENTO' ? 'bg-white dark:bg-neutral-700 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                          >
+                            <Briefcase size={14} /> Departamentos
+                          </button>
+                        )}
                       </div>
 
                       {/* Botones de Acción (Solo modo EQUIPO) */}
@@ -381,10 +473,88 @@ export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioAc
 
                   {/* Renderizado de la lista de integrantes o buscador */}
                   <div className="flex-1 mt-2">
+                    {modoAsignacion === 'DEPARTAMENTO' && (
+                      <div className="mb-4 p-4 border border-amber-200 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/10 rounded-2xl animate-in slide-in-from-top-2">
+                        <label className="text-xs font-bold text-amber-700 dark:text-amber-500 uppercase tracking-widest mb-2 block flex items-center gap-2">
+                          <Building2 size={14} /> Seleccionar Departamento:
+                        </label>
+                        <select
+                          className="w-full bg-white dark:bg-neutral-900 border border-amber-200 dark:border-amber-800 text-sm p-3 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none transition-all cursor-pointer font-bold text-gray-700 dark:text-gray-200"
+                          defaultValue=""
+                          onChange={(e) => {
+                            const selectedId = e.target.value;
+                            if (!selectedId) return;
+                            
+                            const deptoSeleccionado = departamentosEquipo.find(d => d.id === selectedId);
+                            if (deptoSeleccionado) {
+                              
+                              // Función para obtener IDs de manera recursiva (padre + todos los hijos/subdeptos)
+                              const obtenerIdsFamilia = (padreId: string): string[] => {
+                                const hijos = departamentosEquipo.filter(d => d.parent_id === padreId).map(d => d.id);
+                                let todos = [padreId, ...hijos];
+                                hijos.forEach(hijoId => {
+                                  todos = [...todos, ...obtenerIdsFamilia(hijoId).filter(id => id !== hijoId)]; // Evita duplicar el propio hijo
+                                });
+                                return todos;
+                              };
+
+                              const todosLosIds = obtenerIdsFamilia(selectedId);
+                              
+                              // Recolectar todos los miembros únicos de toda la jerarquía
+                              const miembrosTotalesIds = new Set<string>();
+                              departamentosEquipo
+                                .filter(d => todosLosIds.includes(d.id))
+                                .forEach(d => {
+                                  d.miembros.forEach(mId => miembrosTotalesIds.add(mId));
+                                });
+
+                              const miembrosDepto = usuariosDisponibles.filter(u => miembrosTotalesIds.has(u.id));
+                              const nuevos = miembrosDepto
+                                .filter(u => !integrantes.some(i => i.usuario_id === u.id))
+                                .map(u => ({
+                                  usuario_id: u.id,
+                                  nombre: u.nombre,
+                                  avatar_url: u.avatar_url,
+                                  es_encargado: false,
+                                  rol: '',
+                                  is_new: true
+                                }));
+                              
+                              if (nuevos.length > 0) {
+                                setIntegrantes([...integrantes, ...nuevos]);
+                                Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 }).fire({ 
+                                  icon: 'success', 
+                                  title: `¡${nuevos.length} miembros añadidos!`,
+                                  text: "Incluyendo sub-departamentos (si aplica)."
+                                });
+                              } else {
+                                Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 }).fire({ icon: 'info', title: 'Todos ya están en la lista' });
+                              }
+                            }
+                            // Restablecer el select
+                            e.target.value = "";
+                          }}
+                        >
+                          <option value="" disabled hidden>Elige un departamento de la lista...</option>
+                          {departamentosOrdenados.map(d => {
+                            // Crear un prefijo visual basado en el nivel de profundidad
+                            const prefix = d.level > 0 ? "— ".repeat(d.level) + " " : "";
+                            
+                            return (
+                              <option key={d.id} value={d.id}>
+                                {prefix}{d.nombre.toUpperCase()}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    )}
                     <SeccionEquipo
                       integrantes={integrantes}
                       setIntegrantes={setIntegrantes}
-                      usuarios={usuarios}
+                      usuarios={usuariosDisponibles}
+                      disabled={guardar.isPending}
+                      hideSearch={modoAsignacion !== 'INDIVIDUAL'}
                     />
                   </div>
                 </div>
@@ -427,7 +597,7 @@ export default function NuevoPlanificador({ isOpen, onClose, usuarios, usuarioAc
       <GestorEquipos
         isOpen={isGestorOpen}
         onClose={() => setIsGestorOpen(false)}
-        usuarios={usuarios}
+        usuarios={usuariosDisponibles}
         onSelectPlantilla={(id) => handleSelectPlantilla(id)}
       />
     </>

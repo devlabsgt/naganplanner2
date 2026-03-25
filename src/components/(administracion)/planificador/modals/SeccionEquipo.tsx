@@ -19,9 +19,10 @@ interface Props {
   setIntegrantes: (items: IntegranteUI[]) => void;
   usuarios: Perfil[];
   disabled?: boolean;
+  hideSearch?: boolean;
 }
 
-export function SeccionEquipo({ integrantes, setIntegrantes, usuarios, disabled = false }: Props) {
+export function SeccionEquipo({ integrantes, setIntegrantes, usuarios, disabled = false, hideSearch = false }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeRolInput, setActiveRolInput] = useState<string | null>(null);
@@ -95,8 +96,8 @@ export function SeccionEquipo({ integrantes, setIntegrantes, usuarios, disabled 
   return (
     <div className="space-y-4">
 
-      {/* BUSCADOR DE INTEGRANTES - Solo visible si no está deshabilitado */}
-      {!disabled && (
+      {/* BUSCADOR DE INTEGRANTES - Solo visible si no está deshabilitado y hideSearch es falso */}
+      {!disabled && !hideSearch && (
         <div className="relative" ref={dropdownRef}>
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="flex-1 flex items-center gap-3 px-4 py-3 border border-gray-200 dark:border-neutral-700 rounded-2xl bg-white dark:bg-neutral-900 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500 transition-all">

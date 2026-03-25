@@ -30,7 +30,7 @@ export async function checkIsJefe(supabase: any, userId: string): Promise<boolea
 
 export async function obtenerDatosPlanificador(
   tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas',
-  modulo: 'alabanza' | 'danza' | 'multimedia' | 'todas'
+  modulo: 'alabanza' | 'danza' | 'danza-damas' | 'danza-caballeros' | 'multimedia' | 'todas' | 'reunion' | string
 ) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -39,7 +39,7 @@ export async function obtenerDatosPlanificador(
   // 1. Obtener Perfiles
   const { data: rawProfiles } = await supabase
     .from('profiles')
-    .select('id, nombre, email, avatar_url, activo, rol');
+    .select('id, nombre, email, avatar_url, activo, rol, genero');
 
   const perfilesMap = new Map((rawProfiles || []).map((p: any) => [p.id, p]));
   const miPerfil = perfilesMap.get(user.id);
@@ -92,20 +92,21 @@ export async function obtenerDatosPlanificador(
         const idsEmpleados = puestosMiembros.map(p => p.usuario_id as string);
         teamIds = [...new Set([...teamIds, ...idsEmpleados])];
 
-        const usuariosYaAsignados = new Set<string>();
         departamentosEquipo = infoDeptos.map(depto => {
           const miembrosDelDepto = puestosMiembros
             .filter(p => p.departamento_id === depto.id)
             .map(p => p.usuario_id as string);
 
-          const miembrosUnicos = miembrosDelDepto.filter(userId => {
-            if (usuariosYaAsignados.has(userId)) return false;
-            usuariosYaAsignados.add(userId);
-            return true;
-          });
+          // Remover duplicados dentro del MISMO departamento
+          const miembrosUnicos = Array.from(new Set(miembrosDelDepto));
 
-          return { id: depto.id, nombre: depto.nombre, miembros: miembrosUnicos };
-        }).filter(depto => depto.miembros.length > 0);
+          return { 
+            id: depto.id, 
+            nombre: depto.nombre, 
+            parent_id: depto.parent_id,
+            miembros: miembrosUnicos 
+          };
+        });
       }
     }
   }
@@ -135,7 +136,8 @@ export async function obtenerDatosPlanificador(
         es_encargado,
         invitación,
         justificación,
-        rol
+        rol,
+        ubicacion
       ),
       act_actividades_alabanzas (
         alabanza_id,
@@ -305,7 +307,8 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
         es_encargado: int.es_encargado,
         invitación: estadoInvitacion,
         justificación: motivoRechazo,
-        rol: int.rol
+        rol: int.rol,
+        ubicacion: existente ? existente.ubicacion : null
       };
     });
 

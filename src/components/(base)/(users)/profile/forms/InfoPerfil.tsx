@@ -203,10 +203,11 @@ export const InfoPerfil = ({ userId, canEdit }: InfoPerfilProps) => {
           <Label>Género</Label>
           <Select
             name="genero"
-            value={formData.genero || "Masculino"}
+            value={formData.genero || ""}
             onChange={handleChange}
             disabled={!canEdit}
           >
+            <option value="" disabled hidden>Seleccionar género...</option>
             <option value="Masculino">Masculino</option>
             <option value="Femenino">Femenino</option>
           </Select>

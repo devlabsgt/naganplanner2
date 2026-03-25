@@ -159,3 +159,54 @@ export async function obtenerRolesExistentes() {
   
   return rolesUnicos.sort((a, b) => a.localeCompare(b));
 }
+
+export async function marcarAsistenciaUbicacion(
+  actividad_id: string,
+  usuario_id: string,
+  tipo: 'entrada' | 'salida',
+  latitud: number,
+  longitud: number,
+  fecha_creacion: string
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('No autenticado');
+
+  // Asegurarnos de que el usuario solo puede marcar SU propia asistencia, 
+  // o si es jefe/creador, tal vez pueda marcar la de otros? 
+  // Por ahora lo limitamos a auto-gestión o permitir si tiene permisos.
+  // Para asistencia, lo ideal es que cada quien marque la suya por GPS.
+  if (user.id !== usuario_id) {
+    throw new Error('Solo puedes marcar tu propia asistencia.');
+  }
+
+  // Buscar integrante para obtener la ubicación actual
+  const { data: integrante, error: findError } = await supabase
+    .from('act_integrantes')
+    .select('ubicacion')
+    .eq('actividad_id', actividad_id)
+    .eq('usuario_id', usuario_id)
+    .single();
+
+  if (findError) throw new Error('Error al buscar integrante: ' + findError.message);
+
+  let currentUbicacion = integrante.ubicacion || {};
+
+  // Agregar o actualizar el tipo (entrada o salida)
+  currentUbicacion[tipo] = {
+    tipo,
+    latitud,
+    longitud,
+    fecha_creacion
+  };
+
+  const { error: updateError } = await supabase
+    .from('act_integrantes')
+    .update({ ubicacion: currentUbicacion })
+    .eq('actividad_id', actividad_id)
+    .eq('usuario_id', usuario_id);
+
+  if (updateError) throw new Error('Error al guardar ubicación: ' + updateError.message);
+
+  revalidatePath('/kore/planificador');
+}

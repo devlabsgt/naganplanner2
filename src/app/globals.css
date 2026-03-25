@@ -142,6 +142,25 @@
     background-color: var(--background);
     color: var(--foreground);
   }
+
+  /* Cursor pointer global para todos los elementos interactivos */
+  button,
+  a,
+  select,
+  label[for],
+  [onclick],
+  .cursor-pointer,
+  [role="button"],
+  [role="link"],
+  [role="menuitem"],
+  [role="tab"],
+  [role="option"],
+  [role="checkbox"],
+  [role="switch"],
+  [tabindex]:not([tabindex="-1"]),
+  summary {
+    cursor: pointer !important;
+  }
 }
 
 ::view-transition-old(root),

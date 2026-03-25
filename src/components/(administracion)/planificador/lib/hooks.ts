@@ -23,7 +23,8 @@ import {
   cargarMiembrosDePlantilla,
   obtenerRolesExistentes,
   obtenerRegistroSustituciones,
-  sincronizarRepertorioActividad
+  sincronizarRepertorioActividad,
+  marcarAsistenciaUbicacion
 } from "./actions";
 
 import {
@@ -47,7 +48,7 @@ const PLANIFICADOR_KEYS = {
 // =========================================================================
 export const useGestorPlanificador = (
   tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas',
-  modulo: 'alabanza' | 'danza' | 'multimedia' | 'todas',
+  modulo: 'alabanza' | 'danza' | 'danza-damas' | 'danza-caballeros' | 'multimedia' | 'todas' | 'reunion' | string,
   initialData?: any
 ) => {
   return useQuery({
@@ -110,6 +111,18 @@ export const usePlanificadorMutations = () => {
       actualizarChecklistPlanificador(id, items),
     onSuccess: invalidar,
   });
+  
+  const marcarAsistencia = useMutation({
+    mutationFn: ({ actividadId, usuarioId, tipo, lat, lng, fecha }: { 
+      actividadId: string, 
+      usuarioId: string, 
+      tipo: 'entrada' | 'salida', 
+      lat: number, 
+      lng: number, 
+      fecha: string 
+    }) => marcarAsistenciaUbicacion(actividadId, usuarioId, tipo, lat, lng, fecha),
+    onSuccess: invalidar,
+  });
 
   // --- Mutaciones de Video ---
   const mutationAgregarVideo = useMutation({
@@ -144,6 +157,7 @@ export const usePlanificadorMutations = () => {
     borrarVideo: mutationBorrarVideo,
     agregarAdjunto: mutationAgregarAdjunto,
     borrarAdjunto: mutationBorrarAdjunto,
+    marcarAsistencia,
 
     sincronizarRepertorio: useMutation({
       mutationFn: ({ id, alabanzasIds }: { id: string, alabanzasIds: string[] }) => sincronizarRepertorioActividad(id, alabanzasIds),

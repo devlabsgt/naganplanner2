@@ -17,6 +17,7 @@ type DeptoEquipo = {
   id: string;
   nombre: string;
   miembros: string[];
+  parent_id?: string | null;
 };
 
 interface Props {
@@ -28,7 +29,7 @@ interface Props {
     isJefe?: boolean;
   };
   tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas';
-  modulo: 'alabanza' | 'danza' | 'multimedia' | 'todas';
+  modulo: 'alabanza' | 'danza' | 'danza-damas' | 'danza-caballeros' | 'multimedia' | 'todas' | 'reunion' | string;
 }
 
 const MESES = [
@@ -93,16 +94,27 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
 
   // --- USUARIOS FILTRADOS PARA ASIGNACIÓN ---
   const usuariosParaAsignar = useMemo(() => {
-    // Si el usuario es Jefe y ya se calcularon sus departamentos
-    if (isJefe && departamentosEquipo.length > 0) {
-      // Unir mi propio ID con todos los IDs de los miembros de mis departamentos
-      const idsEquipo = new Set([perfil.id, ...departamentosEquipo.flatMap(d => d.miembros)]);
-      // Retornar solo los usuarios del sistema que pertenezcan a este grupo
-      return usuarios.filter(u => idsEquipo.has(u.id));
+    let result = usuarios;
+
+    // Filtro estricto por género para Módulos de Danza
+    if (modulo === 'danza-damas') {
+      result = result.filter(u => typeof u.genero === 'string' && u.genero.trim().toLowerCase() === 'femenino');
+    } else if (modulo === 'danza-caballeros') {
+      result = result.filter(u => typeof u.genero === 'string' && u.genero.trim().toLowerCase() === 'masculino');
     }
-    // Si no entra en la condición anterior (ej: no tiene departamentos asignados aún o es superadmin con tipoVista = todas)
-    return usuarios;
-  }, [usuarios, departamentosEquipo, isJefe, perfil.id]);
+
+    // Si el usuario es Jefe y ya se calcularon sus departamentos
+    // EXCEPCIÓN: Los SUPER, ADMIN y RRHH en vistas globales o reuniones deben poder ver a todos
+    const esAdminAutorizado = ['SUPER', 'ADMIN', 'RRHH'].includes(perfil.rol?.toUpperCase() || '');
+    const esContextoGlobal = modulo === 'todas' || modulo === 'reunion';
+
+    if (isJefe && departamentosEquipo.length > 0 && !(esAdminAutorizado && esContextoGlobal)) {
+      const idsEquipo = new Set([perfil.id, ...departamentosEquipo.flatMap(d => d.miembros)]);
+      result = result.filter(u => idsEquipo.has(u.id));
+    }
+
+    return result;
+  }, [usuarios, departamentosEquipo, isJefe, perfil.id, modulo]);
 
   // --- LÓGICA DE FILTRADO BASE ---
   const planificadoresFiltradosRaw = useMemo(() => {
@@ -186,7 +198,7 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
       map[fechaKey].push(plan);
     });
 
-    const grupos = Object.entries(map).sort((a, b) => a[0].localeCompare(b[0]));
+    const grupos = Object.entries(map).sort((a, b) => b[0].localeCompare(a[0]));
 
     if (grupos.length === 0) {
       return (
@@ -210,7 +222,13 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
             </h3>
 
             <div className="grid grid-cols-1 gap-3">
-              {planificadoresGrupo.map((plan) => (
+              {planificadoresGrupo
+                .sort((a, b) => {
+                  const dateA = a.due_date ? new Date(a.due_date).getTime() : 0;
+                  const dateB = b.due_date ? new Date(b.due_date).getTime() : 0;
+                  return dateB - dateA;
+                })
+                .map((plan) => (
                 <PlanificadorItem
                   key={plan.id}
                   planificador={plan}
@@ -219,6 +237,8 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
                   isExpanded={expandedId === plan.id}
                   onToggle={() => setExpandedId(expandedId === plan.id ? null : plan.id)}
                   isJefe={isJefe}
+                  modulo={modulo}
+                  tipoVista={tipoVista}
                 />
               ))}
             </div>
@@ -229,11 +249,82 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
   };
 
   const isVistaDepartamentos = (tipoVista === 'mi_equipo' || tipoVista === 'todas') && departamentosEquipo.length > 0;
-  const idsEnDeptos = departamentosEquipo.flatMap(d => d.miembros);
-  const actosDirectos = planificadoresGrupales.filter(p => {
-    const encargado = p.integrantes.find(i => i.es_encargado);
-    return !encargado || !idsEnDeptos.includes(encargado.usuario_id);
-  });
+  
+  // --- ASIGNACIÓN ÚNICA DE ACTIVIDADES A DEPARTAMENTOS ---
+  // Algoritmo para encontrar el departamento más adecuado (Lowest Common Ancestor aproximado)
+  const { mapActividadesPorDepto, actosDirectosFallback } = useMemo(() => {
+    const mapa: Record<string, Planificador[]> = {};
+    const directos: Planificador[] = [];
+
+    // 1. Precomputar los "miembrosExtendidos" de cada departamento (incluyendo todos sus sub-departamentos)
+    const deptosConExtendidos = departamentosEquipo.map(depto => {
+      const miembrosSet = new Set<string>();
+      
+      const agregarFamilia = (idActual: string) => {
+        const d = departamentosEquipo.find(x => x.id === idActual);
+        if (d) {
+          d.miembros.forEach(m => miembrosSet.add(m));
+          const hijos = departamentosEquipo.filter(x => x.parent_id === idActual);
+          hijos.forEach(hijo => agregarFamilia(hijo.id));
+        }
+      };
+      
+      agregarFamilia(depto.id);
+      
+      return {
+        ...depto,
+        miembrosExtendidos: Array.from(miembrosSet)
+      };
+    });
+
+    // 2. Asignar cada actividad a un ÚNICO departamento
+    planificadoresGrupales.forEach(p => {
+      const integrantesIds = p.integrantes.map(i => i.usuario_id);
+      const encargado = p.integrantes.find(i => i.es_encargado);
+
+      // Calcular la cobertura
+      const coberturaDeptos = deptosConExtendidos.map(depto => {
+        // ¿Cuántos miembros de la actividad pertenecen a este departamento o a sus hijos?
+        const matchCount = integrantesIds.filter(id => depto.miembrosExtendidos.includes(id)).length;
+        // ¿El líder pertenece explícitamente a este departamento extendido?
+        const tieneEncargado = encargado ? depto.miembrosExtendidos.includes(encargado.usuario_id) : false;
+        
+        return {
+          deptoId: depto.id,
+          matchCount,
+          totalExtendidos: depto.miembrosExtendidos.length,
+          tieneEncargado
+        };
+      }).filter(d => d.matchCount > 0);
+
+      if (coberturaDeptos.length === 0) {
+        directos.push(p);
+        return;
+      }
+
+      // Ordenar para encontrar el "mejor" departamento:
+      coberturaDeptos.sort((a, b) => {
+        // 1. El que agrupe a MÁS miembros de la actividad (Ej. Padre agrupa a todos, hijo solo a algunos)
+        if (b.matchCount !== a.matchCount) return b.matchCount - a.matchCount; 
+        
+        // 2. Desempate: El que tenga al Encargado (Líder)
+        if (b.tieneEncargado !== a.tieneEncargado) return b.tieneEncargado ? 1 : -1;
+        
+        // 3. Desempate: Si agrupan a la misma cantidad de miembros (ej. todos son coristas),
+        // preferimos el MÁS ESPECÍFICO (es decir, el departamento más pequeño / sub-departamento).
+        return a.totalExtendidos - b.totalExtendidos; 
+      });
+
+      const bestDeptoId = coberturaDeptos[0].deptoId;
+      if (!mapa[bestDeptoId]) mapa[bestDeptoId] = [];
+      mapa[bestDeptoId].push(p);
+    });
+
+    return { mapActividadesPorDepto: mapa, actosDirectosFallback: directos };
+  }, [planificadoresGrupales, departamentosEquipo]);
+
+  // Las actividades que no cayeron en ningún departamento específico van a Grupales/Externas
+  const actosDirectos = actosDirectosFallback;
 
   return (
     <div className="space-y-6 font-sans max-w-6xl mx-auto">
@@ -252,7 +343,7 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
               </p>
             </div>
 
-            {isJefe && (
+            {(isJefe && (modulo !== 'reunion' || ['admin', 'super', 'rrhh'].includes(perfil.rol?.toLowerCase() || ''))) && (
               <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto scrollbar-hide">
                 {/* BOTÓN HISTORIAL DE SUSTITUCIONES */}
                 <button
@@ -414,10 +505,7 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
                 )}
 
                 {departamentosEquipo.map(depto => {
-                  const actsDepto = planificadoresGrupales.filter(p => {
-                    const encargado = p.integrantes.find(i => i.es_encargado);
-                    return encargado && depto.miembros.includes(encargado.usuario_id);
-                  });
+                  const actsDepto = mapActividadesPorDepto[depto.id] || [];
                   const isOpen = expandedDeptos[depto.id];
                   if (actsDepto.length === 0) return null;
 
@@ -463,6 +551,8 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
         usuarioActualId={perfil.id}
         isJefe={isJefe}
         modulo={modulo}
+        tipoVista={tipoVista}
+        departamentosEquipo={departamentosEquipo}
       />
 
       {/* MODAL DE GESTIÓN (CRUD de equipos) */}

@@ -20,6 +20,8 @@ import { BrandLogo } from "@/components/ui/BrandLogo";
 import { AuroraText } from "@/components/ui/aurora-text";
 import { PushNotificationToggle } from "@/components/ui/PushNotificationToggle";
 import { RefreshButton } from "@/components/ui/RefreshButton";
+import { BreadcrumbNav } from "@/components/ui/breadcrumb-nav";
+
 
 export default function Header() {
   const user = useUser();
@@ -46,7 +48,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="w-full bg-background transition-all">
+      <header className="w-full bg-background transition-all border-b border-border/50">
         <div className="mx-auto flex h-24 items-center justify-between pl-3 sm:pl-6 lg:pl-12 pr-2 sm:pr-4 lg:pr-8">
           <div className="flex items-center h-full">
             <Link
@@ -80,6 +82,8 @@ export default function Header() {
             </button>
           </div>
         </div>
+        
+        {user && <BreadcrumbNav />}
       </header>
 
       {isOpen && (

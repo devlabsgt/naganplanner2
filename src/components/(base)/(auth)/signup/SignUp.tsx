@@ -123,7 +123,7 @@ export default function SignUp({ isOpen, onClose }: SignUpProps) {
     setStep(1);
     setSavedData({ user: "", pass: "" });
     hasMovedToStep2.current = false;
-    setIsUsernameDirty(false); 
+    setIsUsernameDirty(false);
     if (logic.state) {
       logic.state.success = false;
       logic.state.errors = undefined;
@@ -227,7 +227,7 @@ export default function SignUp({ isOpen, onClose }: SignUpProps) {
                         onChange={(e) => logic.setName(e.target.value)}
                         className={cn(
                           logic.state?.errors?.name &&
-                            "border-destructive ring-1 ring-destructive",
+                          "border-destructive ring-1 ring-destructive",
                         )}
                       />
                     </div>
@@ -240,12 +240,12 @@ export default function SignUp({ isOpen, onClose }: SignUpProps) {
                         placeholder="ej. jperz"
                         value={logic.username}
                         onChange={(e) => {
-                          setIsUsernameDirty(true); 
+                          setIsUsernameDirty(true);
                           logic.setUsername(e.target.value);
                         }}
                         className={cn(
                           logic.state?.errors?.username &&
-                            "border-destructive ring-1 ring-destructive",
+                          "border-destructive ring-1 ring-destructive",
                         )}
                       />
                       {logic.state?.errors?.username && (
@@ -267,6 +267,7 @@ export default function SignUp({ isOpen, onClose }: SignUpProps) {
                         <option value="admin">Administrador</option>
                         <option value="rrhh">Recursos Humanos</option>
                         <option value="super">Super Admin</option>
+                        <option value="alumno">Alumno</option>
                       </Select>
                     </div>
 

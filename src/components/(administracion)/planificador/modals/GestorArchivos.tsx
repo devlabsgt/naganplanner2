@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileText, Trash2, Eye, UploadCloud, X, Loader2, Paperclip } from 'lucide-react';
+import { FileText, Trash2, Eye, UploadCloud, X, Loader2, Paperclip, Download } from 'lucide-react';
 import { createClient } from '@/utils/supabase/client';
 import Swal from 'sweetalert2';
 import { usePlanificadorMutations } from '../lib/hooks'; // Importamos el hook
@@ -17,20 +17,43 @@ export default function GestorArchivos({ actividadId, adjuntosIniciales, readonl
   const [adjuntos, setAdjuntos] = useState<Adjunto[]>(adjuntosIniciales || []);
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isMobileMode, setIsMobileMode] = useState(false);
 
   const supabase = createClient();
   
   // Extraemos las mutaciones necesarias del hook
   const { agregarAdjunto, borrarAdjunto } = usePlanificadorMutations();
 
+  // === DETECCIÓN DE PANTALLA MÓVIL ===
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileMode(window.innerWidth < 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    // Solo se ejecuta en el cliente
+    if (typeof window !== 'undefined') {
+      checkMobile();
+      window.addEventListener('resize', checkMobile);
+      return () => window.removeEventListener('resize', checkMobile);
+    }
+  }, []);
+
   // === BLOQUEO DE SCROLL DEL FONDO ===
   useEffect(() => {
     if (previewUrl) {
       document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+
+      const handleZoom = (e: WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+        }
+      };
+
+      window.addEventListener('wheel', handleZoom, { passive: false });
+      return () => {
+        window.removeEventListener('wheel', handleZoom);
+        document.body.style.overflow = 'unset';
+      };
     }
-    return () => { document.body.style.overflow = 'unset'; };
   }, [previewUrl]);
 
   // Sincronizar estado local si los props cambian (importante para TanStack Query)
@@ -204,23 +227,52 @@ export default function GestorArchivos({ actividadId, adjuntosIniciales, readonl
           <div className="flex items-center justify-between px-4 py-3 bg-black border-b border-white/10">
             <h3 className="text-white font-medium text-sm flex items-center gap-2">
               <FileText size={16} className="text-red-400"/>
-              Previsualización de Documento
+              <span className="hidden sm:inline">Previsualización de Documento</span>
+              <span className="sm:hidden">Documento</span>
             </h3>
-            <button 
-              onClick={() => setPreviewUrl(null)}
-              className="p-2 text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors"
-            >
-              <X size={20} />
-            </button>
+            
+            <div className="flex items-center gap-3">
+              <a 
+                href={`${previewUrl}?download=`} 
+                download
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors shadow-lg shadow-blue-500/20 active:scale-95 text-center"
+              >
+                <Download size={14} />
+                <span className="hidden sm:inline">Guardar o Imprimir</span>
+                <span className="sm:hidden">Descargar</span>
+              </a>
+              
+              <button 
+                onClick={() => setPreviewUrl(null)}
+                className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
           
-          <div className="flex-1 w-full h-full p-4 md:p-8">
-            <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-2xl">
-              <iframe 
-                src={previewUrl} 
-                className="w-full h-full" 
-                title="Visor PDF"
-              />
+          <div className="flex-1 w-full h-full p-2 sm:p-4 md:p-8 relative">
+            <div className="w-full h-full bg-white rounded-lg overflow-hidden shadow-2xl relative">
+              {isMobileMode ? (
+                 <iframe 
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(previewUrl)}&embedded=true`} 
+                    className="w-full h-full" 
+                    title="Visor PDF Móvil"
+                 />
+              ) : (
+                 <object
+                    data={previewUrl}
+                    type="application/pdf"
+                    className="w-full h-full absolute inset-0"
+                 >
+                   {/* Fallback si el navegador de PC no soporta plugins PDF, es raro pero posible */}
+                   <iframe 
+                      src={previewUrl} 
+                      className="w-full h-full shadow-inner" 
+                      title="Visor PDF Nativo"
+                   />
+                 </object>
+              )}
             </div>
           </div>
         </div>

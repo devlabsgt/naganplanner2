@@ -36,7 +36,8 @@ export const integranteSchema = z.object({
   perfil: z.object({
     nombre: z.string(),
     avatar_url: z.string().nullable().optional()
-  }).optional()
+  }).optional(),
+  ubicacion: z.any().optional().nullable()
 });
 
 // 2. Schema de Base de Datos (Lectura)
@@ -88,7 +89,7 @@ export const planificadorFormSchema = z.object({
   
   // --- CORRECCIÓN AQUÍ ---
   // Eliminamos el objeto de opciones { required_error... } porque .default() ya maneja el caso vacío.
-  status: z.enum(['servicio', 'ensayo', 'servicio_especial']).default('servicio'),
+  status: z.enum(['servicio', 'ensayo', 'servicio_especial', 'reunion']).default('servicio'),
 
   modulo: z.string().optional(),
   checklist: z.array(checklistItemSchema).optional().default([]),
@@ -116,6 +117,7 @@ export const perfilSchema = z.object({
   rol: z.string().optional().nullable(),
   avatar_url: z.string().optional().nullable(),
   activo: z.boolean().optional(),
+  genero: z.string().optional().nullable(),
 });
 
 export type Perfil = z.infer<typeof perfilSchema>;

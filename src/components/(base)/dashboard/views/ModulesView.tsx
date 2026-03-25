@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { TODOS_LOS_MODULOS, Rol, Modulo } from "../constants";
 import { ModuleCard } from "../modules/ModuleCard";
 import ModuleAccordion from "../modules/ModuleAccordion";
+import { useUser } from "@/components/(base)/providers/UserProvider";
+import { useProfile } from "@/components/(base)/(users)/profile/lib/hooks";
 
 interface ModulesViewProps {
   rol?: Rol | null;
@@ -12,15 +14,25 @@ interface ModulesViewProps {
 
 export function ModulesView({ rol, isJefe = false }: ModulesViewProps) {
   const [loadingModule, setLoadingModule] = useState<string | null>(null);
+  
+  const user = useUser();
+  const { profile } = useProfile(user?.id ?? "", !!user?.id);
 
   const modulosVisibles = useMemo(() => {
     return TODOS_LOS_MODULOS.filter((mod) => {
+      // Restricción por género solo para usuarios estándar
+      if (rol === "user") {
+        const generoStr = (profile?.genero as string)?.trim().toLowerCase();
+        if (mod.id === "DANZA_DAMAS" && generoStr !== "femenino") return false;
+        if (mod.id === "DANZA_CABALLEROS" && generoStr !== "masculino") return false;
+      }
+
       if (mod.soloJefe && !isJefe) return false;
       if (mod.rolesPermitidos === "TODOS") return true;
       if (!rol) return false;
       return mod.rolesPermitidos.includes(rol);
     });
-  }, [rol, isJefe]);
+  }, [rol, isJefe, profile]);
 
   const modulosMinisteriales = useMemo(
     () => modulosVisibles.filter((m) => m.subgrupo === "Organización Ministerial"),

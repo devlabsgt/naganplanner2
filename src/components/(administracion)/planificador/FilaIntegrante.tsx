@@ -1,7 +1,11 @@
 'use client';
 
-import { CheckCircle2, Ban, HelpCircle, MessageSquare, RefreshCw, UserMinus, Briefcase } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2, Ban, HelpCircle, MessageSquare, RefreshCw, Briefcase, MapPin, Loader2 } from 'lucide-react';
 import { Integrante } from './lib/zod';
+import { usePlanificadorMutations } from './lib/hooks';
+import Swal from 'sweetalert2';
+import ModalUbicacion from './modals/ModalUbicacion';
 
 interface Props {
   integrante: Integrante;
@@ -11,6 +15,7 @@ interface Props {
   onSustituir: (e: React.MouseEvent, usuario_id: string, nombre: string) => void;
   onDarDeBaja: (e: React.MouseEvent, usuario_id: string, nombre: string) => void;
   isJefe?: boolean;
+  actividadId: string;
 }
 
 export default function FilaIntegrante({
@@ -20,12 +25,69 @@ export default function FilaIntegrante({
   onVerJustificacion,
   onSustituir,
   onDarDeBaja,
-  isJefe = false 
+  isJefe = false,
+  actividadId
 }: Props) {
   const nombre = integrante.perfil?.nombre || 'Usuario Desconocido';
   const estado = integrante.invitación; 
   const esMiUsuario = integrante.usuario_id === usuarioActualId;
   const rol = integrante.rol;
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loadingGeo, setLoadingGeo] = useState<'entrada' | 'salida' | null>(null);
+  const { marcarAsistencia } = usePlanificadorMutations();
+
+  const entrada = integrante.ubicacion?.entrada;
+  const salida = integrante.ubicacion?.salida;
+
+  const handleMarcar = async (tipo: 'entrada' | 'salida') => {
+    if (!navigator.geolocation) {
+      Swal.fire('Error', 'Tu navegador no soporta geolocalización', 'error');
+      return;
+    }
+
+    setLoadingGeo(tipo);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          if (!actividadId) throw new Error("Falta actividad_id");
+          await marcarAsistencia.mutateAsync({
+            actividadId,
+            usuarioId: integrante.usuario_id,
+            tipo,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            fecha: new Date().toISOString()
+          });
+          Swal.fire({
+            toast: true, position: 'top-end', timer: 2000, showConfirmButton: false,
+            icon: 'success', title: `${tipo === 'entrada' ? 'Entrada' : 'Salida'} registrada`
+          });
+        } catch (error: any) {
+          Swal.fire('Error', error.message, 'error');
+        } finally {
+          setLoadingGeo(null);
+        }
+      },
+      (err) => {
+        setLoadingGeo(null);
+        Swal.fire('Error', 'No se pudo obtener la ubicación. Revisa los permisos del navegador.', 'error');
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const formatearHora = (isoStr: string) => {
+    return new Date(isoStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const calcularDuracion = (start: string, end: string) => {
+    const diffMs = new Date(end).getTime() - new Date(start).getTime();
+    if (diffMs <= 0) return "--h --m";
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
 
   return (
     <div className="flex flex-col bg-white dark:bg-[#111111] p-3 rounded-lg border border-gray-100 dark:border-neutral-800 transition-colors hover:border-blue-500/30">
@@ -94,19 +156,68 @@ export default function FilaIntegrante({
             )}
         </div>
 
-        <div className="flex items-center gap-3 text-xs font-mono mt-2 sm:mt-0">
-          <span className="text-gray-500 dark:text-gray-400">
-            Entrada: <span className="text-gray-700 dark:text-gray-300 font-medium">--:--</span>
-          </span>
-          <span className="text-gray-500 dark:text-gray-400">
-            Salida: <span className="text-gray-700 dark:text-gray-300 font-medium">--:--</span>
-          </span>
-          <span className="text-blue-600 dark:text-blue-400 font-medium ml-1">
-            Duración: --h --m
-          </span>
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3 mt-3 sm:mt-0 items-start sm:justify-end w-full sm:w-auto">
+          
+          {/* BOTÓN GENERAL PARA EL USUARIO ACTUAL */}
+          {esMiUsuario && (!entrada || !salida) && (
+            <button
+               disabled={loadingGeo !== null}
+               onClick={() => handleMarcar(!entrada ? 'entrada' : 'salida')}
+               className={`w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 py-2 sm:px-2.5 sm:py-1 rounded-lg sm:rounded-md transition-all font-bold text-xs sm:text-[10px] uppercase tracking-wider ${
+                 !entrada 
+                   ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 sm:bg-blue-50 sm:text-blue-600 sm:shadow-none sm:hover:bg-blue-100 dark:bg-blue-600/30 dark:text-blue-300 dark:hover:bg-blue-600/50' 
+                   : 'bg-orange-600 text-white hover:bg-orange-700 shadow-md shadow-orange-500/20 sm:bg-orange-50 sm:text-orange-600 sm:shadow-none sm:hover:bg-orange-100 dark:bg-orange-600/30 dark:text-orange-300 dark:hover:bg-orange-600/50'
+               }`}
+             >
+               {loadingGeo ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} className="opacity-80" />}
+               <span>Marcar {!entrada ? 'Entrada' : 'Salida'}</span>
+            </button>
+          )}
+
+          {/* HORAS DE ENTRADA, SALIDA Y DURACIÓN */}
+          <div className="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 text-[10.5px] sm:text-xs font-mono w-full sm:w-auto bg-transparent sm:bg-transparent dark:bg-transparent sm:dark:bg-transparent p-0">
+            <div className="flex items-center gap-1 whitespace-nowrap">
+              <span className="text-gray-500 dark:text-gray-400">Entrada:</span>
+              {entrada ? (
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  className="text-gray-700 dark:text-gray-300 font-medium hover:text-blue-600 dark:hover:text-blue-400 underline underline-offset-2 decoration-dotted flex items-center gap-1"
+                >
+                  {formatearHora(entrada.fecha_creacion)}
+                </button>
+              ) : (
+                <span className="text-gray-700 dark:text-gray-300 font-medium">--:--</span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 whitespace-nowrap">
+              <span className="text-gray-500 dark:text-gray-400">Salida:</span>
+              {salida ? (
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  className="text-gray-700 dark:text-gray-300 font-medium hover:text-blue-600 dark:hover:text-blue-400 underline underline-offset-2 decoration-dotted flex items-center gap-1"
+                >
+                  {formatearHora(salida.fecha_creacion)}
+                </button>
+              ) : (
+                <span className="text-gray-700 dark:text-gray-300 font-medium">--:--</span>
+              )}
+            </div>
+
+            <span className="text-blue-600 dark:text-blue-400 font-bold whitespace-nowrap">
+              Duración: {(entrada && salida) ? calcularDuracion(entrada.fecha_creacion, salida.fecha_creacion) : '--h --m'}
+            </span>
+          </div>
         </div>
 
       </div>
+
+      <ModalUbicacion
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        datos={integrante.ubicacion}
+        nombreIntegrante={nombre}
+      />
     </div>
   );
 }
