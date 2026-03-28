@@ -107,7 +107,7 @@ export const TODOS_LOS_MODULOS: Modulo[] = [
     id: 'ESCUELAS',
     titulo: 'Escuelas de Aprendizaje Espiritual',
     descripcion: 'Gestión de actividades del ministerio de danza.',
-    ruta: '/kore/enconstruccion',
+    ruta: '/kore/escuela',
     iconKey: 'nhkwajfc',
     categoria: 'Planificación',
     subgrupo: 'Formación Espiritual',

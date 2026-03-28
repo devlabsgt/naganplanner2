@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { X, Save, Clock, CalendarDays, Loader2 } from 'lucide-react';
-import { horarioFormSchema, HorarioForm, DIAS_OPCIONES } from '../lib/zod';
-import { useHorarioMutations } from '../lib/hooks';
+import { horarioFormSchema, HorarioForm, DIAS_OPCIONES } from '../../lib/zod';
+import { useHorarioMutations } from '../../lib/hooks';
 import Swal from 'sweetalert2';
 
 interface Props {
@@ -57,21 +57,35 @@ export default function NuevoHorario({ isOpen, onClose, idEdicion, initialData }
         icon: 'success',
         title: isEditing ? 'Horario actualizado' : 'Horario creado',
         toast: true,
-        position: 'top-end',
+        position: 'top',
         showConfirmButton: false,
-        timer: 3000
+        timer: 5000,
+        timerProgressBar: true,
+        showClass: { popup: 'animate__animated animate__slideInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' }
       });
       onClose();
     } catch (error: any) {
-      Swal.fire({ icon: 'error', title: 'Error', text: error.message });
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: error.message,
+        toast: true,
+        position: 'top',
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true,
+        showClass: { popup: 'animate__animated animate__slideInDown' },
+        hideClass: { popup: 'animate__animated animate__fadeOutUp' }
+      });
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#1a1a1a] w-full max-w-[480px] rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-neutral-800 animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-[5px] sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-[#1a1a1a] w-full max-w-[98%] sm:max-w-[480px] rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-neutral-800 animate-in zoom-in-95 duration-300">
 
         {/* HEADER */}
         <div className="px-6 py-5 border-b border-gray-100 dark:border-neutral-800 flex justify-between items-center bg-white dark:bg-[#1a1a1a]">
@@ -85,7 +99,7 @@ export default function NuevoHorario({ isOpen, onClose, idEdicion, initialData }
         </div>
 
         {/* CONTENIDO */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 sm:p-8 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="px-1 py-3 sm:p-8 space-y-5">
 
           {/* NOMBRE DEL HORARIO */}
           <div className="space-y-2">
@@ -150,49 +164,40 @@ export default function NuevoHorario({ isOpen, onClose, idEdicion, initialData }
           {/* ENTRADA Y SALIDA */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2">
                 Entrada
               </label>
-              <div className="relative">
+              <div className="relative flex justify-center">
                 <input
                   type="time"
                   {...register('entrada')}
-                  className="w-full px-5 py-3 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-600/10 transition-all dark:text-white font-bold"
+                  className="w-full max-w-[140px] px-2 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-600/10 transition-all dark:text-white font-bold text-center"
                 />
-                <Clock size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <label className="text-sm font-black text-gray-700 dark:text-gray-300 flex items-center justify-center gap-2">
                 Salida
               </label>
-              <div className="relative">
+              <div className="relative flex justify-center">
                 <input
                   type="time"
                   {...register('salida')}
-                  className="w-full px-5 py-3 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-600/10 transition-all dark:text-white font-bold"
+                  className="w-full max-w-[140px] px-2 py-2 bg-gray-50 dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-2xl outline-none focus:ring-4 focus:ring-blue-600/10 transition-all dark:text-white font-bold text-center"
                 />
-                <Clock size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
           </div>
 
-          {/* FOOTER */}
-          <div className="pt-4 flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 py-3 text-gray-500 hover:text-gray-800 dark:hover:text-white font-black text-sm uppercase tracking-widest transition-colors"
-            >
-              Cancelar
-            </button>
+          {/* FOOTER CENTRADO */}
+          <div className="pt-8 flex justify-center">
             <button
               type="submit"
               disabled={guardar.isPending}
-              className="flex-[1.5] flex items-center justify-center gap-2 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-600/30 disabled:opacity-70 transition-all transform active:scale-95"
+              className="w-full sm:w-auto px-20 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-blue-600/30 disabled:opacity-70 transition-all transform active:scale-95 flex items-center justify-center gap-2"
             >
-              {guardar.isPending ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+              {guardar.isPending ? <Loader2 className="animate-spin" size={18} /> : null}
               Guardar
             </button>
           </div>

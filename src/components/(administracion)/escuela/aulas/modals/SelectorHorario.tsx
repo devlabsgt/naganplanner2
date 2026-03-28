@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { 
-    X, Plus, Clock, CalendarDays, Edit2, 
-    Trash2, CheckCircle2, ChevronRight, SearchX, PlusCircle 
+import {
+    X, Plus, Clock, CalendarDays, Edit2,
+    Trash2, CheckCircle2, ChevronRight, SearchX, PlusCircle
 } from 'lucide-react';
-import { Horario, DIAS_OPCIONES } from '../lib/zod';
-import { useHorarioMutations } from '../lib/hooks';
+import { Horario, DIAS_OPCIONES } from '../../lib/zod';
+import { useHorarioMutations } from '../../lib/hooks';
 import NuevoHorario from './NuevoHorario';
 import Swal from 'sweetalert2';
 
@@ -46,9 +46,30 @@ export default function SelectorHorario({ isOpen, onClose, horarios, onSelect, s
         if (res.isConfirmed) {
             try {
                 await eliminar.mutateAsync(h.id);
-                Swal.fire({ icon: 'success', title: 'Horario eliminado', toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Horario eliminado',
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    timerProgressBar: true,
+                    showClass: { popup: 'animate__animated animate__slideInDown' },
+                    hideClass: { popup: 'animate__animated animate__fadeOutUp' }
+                });
             } catch (err: any) {
-                Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: err.message,
+                    toast: true,
+                    position: 'top',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    timerProgressBar: true,
+                    showClass: { popup: 'animate__animated animate__slideInDown' },
+                    hideClass: { popup: 'animate__animated animate__fadeOutUp' }
+                });
             }
         }
     };
@@ -69,14 +90,14 @@ export default function SelectorHorario({ isOpen, onClose, horarios, onSelect, s
 
     return (
         <>
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-                <div className="bg-[#f8f9fa] dark:bg-[#121212] w-full max-w-[550px] rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden border border-white/10 animate-in zoom-in-95 duration-200">
-                    
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-[5px] sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-[#121212] w-full max-w-[98%] sm:max-w-[550px] rounded-[2.5rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden border border-[#d5cec2] dark:border-white/10 animate-in zoom-in-95 duration-200">
+
                     {/* HEADER */}
                     <div className="px-8 py-6 flex justify-between items-center border-b border-gray-100 dark:border-white/5 bg-white dark:bg-[#1a1a1a]">
                         <div>
                             <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Seleccionar Horario</h2>
-                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-0.5">Gestión de Horarios Maestros</p>
+                            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-0.5">Gestión de Horarios</p>
                         </div>
                         <button onClick={onClose} className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors text-gray-400">
                             <X size={22} />
@@ -84,9 +105,9 @@ export default function SelectorHorario({ isOpen, onClose, horarios, onSelect, s
                     </div>
 
                     {/* LISTADO */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar">
-                        
-                        <button 
+                    <div className="flex-1 overflow-y-auto px-2 py-6 sm:px-6 space-y-3 custom-scrollbar">
+
+                        <button
                             onClick={() => { setIdEdicion(undefined); setHorarioEdicion(undefined); setIsNuevoOpen(true); }}
                             className="w-full flex items-center justify-center gap-3 py-5 border-2 border-dashed border-gray-200 dark:border-white/10 rounded-[2rem] text-gray-400 dark:text-gray-500 hover:border-blue-500/50 hover:text-blue-500 hover:bg-blue-500/5 transition-all group"
                         >
@@ -96,13 +117,13 @@ export default function SelectorHorario({ isOpen, onClose, horarios, onSelect, s
 
                         {horarios.length > 0 ? (
                             horarios.map((h) => (
-                                <div 
+                                <div
                                     key={h.id}
                                     onClick={() => { onSelect(h.id); onClose(); }}
                                     className={`
                                         group relative p-5 rounded-[2rem] border transition-all cursor-pointer flex items-center gap-4
-                                        ${selectedId === h.id 
-                                            ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-600/30' 
+                                        ${selectedId === h.id
+                                            ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-600/30'
                                             : 'bg-white dark:bg-[#1a1a1a] border-gray-100 dark:border-white/5 text-gray-900 dark:text-white hover:border-blue-500/30 hover:shadow-lg'
                                         }
                                     `}
@@ -121,30 +142,26 @@ export default function SelectorHorario({ isOpen, onClose, horarios, onSelect, s
                                         </p>
                                     </div>
 
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button 
+                                    <div className="flex items-center gap-0 transition-all shrink-0">
+                                        <button
                                             onClick={(e) => handleEditar(e, h)}
-                                            className={`p-2.5 rounded-xl transition-colors ${selectedId === h.id ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-amber-500'}`}
+                                            className={`p-2 rounded-xl transition-colors ${selectedId === h.id ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-amber-500'}`}
                                         >
                                             <Edit2 size={16} />
                                         </button>
-                                        <button 
+                                        <button
                                             onClick={(e) => handleEliminar(e, h)}
-                                            className={`p-2.5 rounded-xl transition-colors ${selectedId === h.id ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-red-500'}`}
+                                            className={`p-2 rounded-xl transition-colors ${selectedId === h.id ? 'hover:bg-white/20 text-white' : 'hover:bg-gray-100 dark:hover:bg-white/5 text-gray-400 hover:text-red-500'}`}
                                         >
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
-
-                                    {selectedId === h.id && (
-                                        <CheckCircle2 size={24} className="text-white ml-2 animate-in zoom-in-50 duration-300" />
-                                    )}
                                 </div>
                             ))
                         ) : (
                             <div className="py-12 flex flex-col items-center justify-center opacity-40">
                                 <SearchX size={48} />
-                                <p className="font-bold text-sm mt-4 uppercase tracking-widest text-center">No hay horarios creados<br/><span className="text-[10px] opacity-70">Empieza creando uno nuevo arriba</span></p>
+                                <p className="font-bold text-sm mt-4 uppercase tracking-widest text-center">No hay horarios creados<br /><span className="text-[10px] opacity-70">Empieza creando uno nuevo arriba</span></p>
                             </div>
                         )}
                     </div>
@@ -158,7 +175,7 @@ export default function SelectorHorario({ isOpen, onClose, horarios, onSelect, s
                 </div>
             </div>
 
-            <NuevoHorario 
+            <NuevoHorario
                 isOpen={isNuevoOpen}
                 onClose={() => { setIsNuevoOpen(false); setIdEdicion(undefined); setHorarioEdicion(undefined); }}
                 idEdicion={idEdicion}

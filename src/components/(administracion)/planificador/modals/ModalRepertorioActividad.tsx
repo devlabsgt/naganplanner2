@@ -79,11 +79,14 @@ export default function ModalRepertorioActividad({ isOpen, onClose, songs, activ
     }
   };
 
-  // Agrupar por tipo usando la copia local
+  // Agrupar por tipo usando la copia local y llaves normalizadas
   const groupedSongs = localSongs.reduce((acc, song) => {
-    const key = song.tipo || 'Sin Categoría';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(song);
+    // Normalizamos la llave para agrupar bajo el mismo nombre aunque en la DB varíe (ej: Alabanza vs alabanza)
+    const typeLabel = song.tipo || 'Sin Categoría';
+    const canonicalKey = Object.keys(acc).find(k => k.toLowerCase() === typeLabel.toLowerCase()) || typeLabel;
+    
+    if (!acc[canonicalKey]) acc[canonicalKey] = [];
+    acc[canonicalKey].push(song);
     return acc;
   }, {} as Record<string, Song[]>);
 
@@ -341,7 +344,11 @@ function DirectorSelector({
                </button>
              )}
 
-             <div className="max-h-[200px] overflow-y-auto custom-scrollbar flex flex-col gap-1 pr-1">
+             <div 
+               className="max-h-[200px] overflow-y-auto custom-scrollbar flex flex-col gap-1 pr-1 pointer-events-auto"
+               onWheel={(e) => e.stopPropagation()}
+               onTouchMove={(e) => e.stopPropagation()}
+             >
                {integrantes.map((int) => {
                  const isSelected = int.usuario_id === song.director_id;
                  return (

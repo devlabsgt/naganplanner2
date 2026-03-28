@@ -177,7 +177,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
   const alabanzasFiltradas = useMemo(() => {
     return alabanzas.filter(a => {
       const matchSearch = a.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      const matchTipo = !filtroTipo || a.tipo === filtroTipo;
+      const matchTipo = !filtroTipo || a.tipo.toLowerCase() === filtroTipo.toLowerCase();
       return matchSearch && matchTipo;
     });
   }, [alabanzas, busqueda, filtroTipo]);
@@ -407,7 +407,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
                       onChange={e => setFiltroTipo(e.target.value)}
                       className="w-full pl-11 pr-8 py-3 bg-neutral-900/50 border border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none focus:ring-4 focus:ring-[#d6a738]/10 text-white transition-all"
                     >
-                      <option value="" className="bg-neutral-900 text-white">FILTRAR POR TIPO</option>
+                      <option value="" className="bg-neutral-900 text-white">TODAS</option>
                       {TIPOS_ALABANZA.map(t => <option key={t} value={t} className="bg-neutral-900 text-white">{t.toUpperCase()}</option>)}
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">

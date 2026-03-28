@@ -1,5 +1,5 @@
 import { obtenerDatosEscuela } from './lib/action';
-import AulaList from './AulaList';
+import AulaList from './aulas/AulaList';
 
 export default async function GestorAulas() {
   const datos = await obtenerDatosEscuela();
@@ -18,12 +18,13 @@ export default async function GestorAulas() {
   }
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-4 py-6 sm:px-6 lg:px-8">
+    <div className="w-full mx-auto px-0.5 md:px-1 py-1 sm:py-2">
       <AulaList 
         initialData={{
           aulas: datos.aulas,
           usuarios: datos.usuarios,
-          horarios: datos.horarios
+          horarios: datos.horarios,
+          perfilActual: datos.perfilActual as any
         }} 
       />
     </div>

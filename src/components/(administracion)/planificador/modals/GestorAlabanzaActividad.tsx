@@ -20,6 +20,14 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { cn } from "@/lib/utils";
 import Swal from 'sweetalert2';
 
+// Lista fija de tipos — debe coincidir con RegistroAlabanzas.tsx
+const TIPOS_ALABANZA = [
+  'Acción de Gracias',
+  'Alabanza',
+  'Alabanza de Adoración',
+  'Canto Especial'
+];
+
 interface Song {
   id: string;
   nombre: string;
@@ -60,12 +68,11 @@ export default function GestorAlabanzaActividad({ actividadId, alabanzasIniciale
   const filteredBanco = useMemo(() => {
     return banco.filter(s => {
       const matchSearch = s.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      const matchTipo = !filtroTipo || s.tipo === filtroTipo;
+      // Comparación case-insensitive para evitar duplicados por capitalización
+      const matchTipo = !filtroTipo || s.tipo.toLowerCase() === filtroTipo.toLowerCase();
       return matchSearch && matchTipo;
     });
   }, [banco, busqueda, filtroTipo]);
-
-  const TIPOS = [...new Set(banco.map(s => s.tipo))];
 
   const handleToggleSong = (song: Song) => {
     const nextIds = new Set(localSelectedIds);
@@ -128,14 +135,14 @@ export default function GestorAlabanzaActividad({ actividadId, alabanzasIniciale
             className={cn(
                "fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]",
                "z-[101] w-full sm:max-w-[1100px] h-[90vh] sm:h-[80vh] flex flex-col p-0 overflow-hidden",
-               "bg-[#0a0a0b] dark:bg-[#111111] border border-[#d6a738]/40 rounded-[2.5rem]",
+               "bg-white dark:bg-[#0a0a0b] border border-[#d5cec2] dark:border-[#d6a738]/40 rounded-[2.5rem]",
                "shadow-[0_0_50px_rgba(214,167,56,0.15)] outline-none duration-500 transition-all",
                "data-[state=open]:animate-in data-[state=closed]:animate-out",
                "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
                "data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95"
             )}
           >
-          <DialogHeader className="px-6 sm:px-8 py-5 sm:py-6 border-b border-neutral-800 bg-[#0a0a0b]">
+          <DialogHeader className="px-6 sm:px-8 py-5 sm:py-6 border-b border-[#e5e5e5] dark:border-neutral-800 bg-white dark:bg-[#0a0a0b]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-[#d6a738] to-[#c08e2a] text-white flex items-center justify-center shadow-lg shadow-[#d6a738]/20 shrink-0">
@@ -143,7 +150,7 @@ export default function GestorAlabanzaActividad({ actividadId, alabanzasIniciale
                   <Music size={28} className="hidden sm:block" />
                 </div>
                 <div className="flex flex-col text-left">
-                  <DialogTitle className="text-sm sm:text-base font-black text-white tracking-tight leading-none sm:leading-normal">
+                  <DialogTitle className="text-sm sm:text-base font-black text-[#4a3f36] dark:text-white tracking-tight leading-none sm:leading-normal">
                     Catálogo de Alabanzas
                   </DialogTitle>
                   <p className="text-[10px] font-black text-[#d6a738] uppercase tracking-widest mt-1">SELECCIONA EL REPERTORIO PARA ESTE SERVICIO</p>
@@ -158,7 +165,7 @@ export default function GestorAlabanzaActividad({ actividadId, alabanzasIniciale
             </div>
           </DialogHeader>
 
-          <div className="p-6 bg-[#0a0a0b] flex flex-col gap-5 border-b border-neutral-800">
+          <div className="p-6 bg-[#fafafa] dark:bg-[#0a0a0b] flex flex-col gap-5 border-b border-[#e5e5e5] dark:border-neutral-800">
              <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1 group">
                    <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 group-focus-within:text-[#d6a738] transition-colors" />
@@ -167,20 +174,20 @@ export default function GestorAlabanzaActividad({ actividadId, alabanzasIniciale
                       placeholder="Buscar por nombre..."
                       value={busqueda}
                       onChange={e => setBusqueda(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-neutral-900/50 border border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#d6a738]/10 text-white placeholder:text-gray-600 transition-all"
+                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-neutral-900/50 border border-[#e5e5e5] dark:border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#d6a738]/10 text-[#4a3f36] dark:text-white placeholder:text-[#847563] dark:placeholder:text-gray-600 transition-all"
                    />
                 </div>
                 <div className="relative min-w-[200px]">
-                   <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                   <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#847563] dark:text-gray-500" />
                    <select 
                       value={filtroTipo}
                       onChange={e => setFiltroTipo(e.target.value)}
-                      className="w-full pl-10 pr-8 py-3 bg-neutral-900/50 border border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none shadow-sm focus:ring-2 focus:ring-[#d6a738]/10 text-white transition-all"
+                      className="w-full pl-10 pr-8 py-3 bg-white dark:bg-neutral-900/50 border border-[#e5e5e5] dark:border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none shadow-sm focus:ring-2 focus:ring-[#d6a738]/10 text-[#4a3f36] dark:text-white transition-all"
                    >
-                      <option value="">TODOS LOS TIPOS</option>
-                      {TIPOS.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                      <option value="" className="bg-white dark:bg-[#0a0a0b]">TODOS LOS TIPOS</option>
+                      {TIPOS_ALABANZA.map(t => <option key={t} value={t} className="bg-white dark:bg-[#0a0a0b]">{t.toUpperCase()}</option>)}
                    </select>
-                   <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                   <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#d6a738] pointer-events-none" />
                 </div>
              </div>
           </div>
@@ -206,10 +213,10 @@ export default function GestorAlabanzaActividad({ actividadId, alabanzasIniciale
                         onClick={() => handleToggleSong(song)}
                         disabled={isPending}
                           className={`
-                            flex items-center justify-between p-5 rounded-2xl border-2 transition-all text-left
+                            flex items-center justify-between p-5 rounded-2xl border-2 transition-all text-left shadow-sm
                             ${isSelected 
                               ? 'bg-[#d6a738]/5 border-[#d6a738] shadow-[0_0_15px_rgba(214,167,56,0.15)]' 
-                              : 'bg-neutral-900/40 border-neutral-800 hover:border-[#d6a738]/40 hover:bg-neutral-900/60 hover:shadow-md'
+                              : 'bg-white dark:bg-neutral-900/40 border-[#e5e5e5] dark:border-neutral-800 hover:border-[#d6a738]/40 hover:bg-gray-50 dark:hover:bg-neutral-900/60 hover:shadow-md'
                             }
                           `}
                         >
@@ -240,7 +247,7 @@ export default function GestorAlabanzaActividad({ actividadId, alabanzasIniciale
              )}
           </div>
           
-           <div className="p-5 border-t border-neutral-800 bg-[#0a0a0b] flex justify-end">
+           <div className="p-5 border-t border-[#e5e5e5] dark:border-neutral-800 bg-white dark:bg-[#0a0a0b] flex justify-end">
               <button 
                 onClick={handleSave}
                 disabled={isPending}
@@ -260,9 +267,12 @@ export default function GestorAlabanzaActividad({ actividadId, alabanzasIniciale
                border-radius: 10px;
              }
              .custom-scrollbar::-webkit-scrollbar-thumb {
-               background: #2a2624;
+               background: #e5e5e5;
                border-radius: 10px;
                transition: all 0.3s ease;
+             }
+             .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+               background: #2a2624;
              }
              .custom-scrollbar::-webkit-scrollbar-thumb:hover {
                background: #d6a738;
