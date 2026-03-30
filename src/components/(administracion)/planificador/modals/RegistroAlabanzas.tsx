@@ -24,8 +24,9 @@ const TIPOS_ALABANZA = [
 
 const getTipoConfig = (tipo: string) => {
   return {
-    bgColor: 'bg-[#492C01] text-[#f4ebc3]',
-    borderColor: 'border-[#d6a738]/30'
+    bgColor: 'bg-[#fbf7e6] dark:bg-[#492C01] text-[#4a3f36] dark:text-[#f4ebc3]',
+    borderColor: 'border-amber-200/40 dark:border-[#d6a738]/30'
+
   };
 };
 
@@ -204,7 +205,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
           className={cn(
             "fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%]",
             "z-[101] w-full sm:max-w-[99vw] h-[90vh] sm:h-[99vh] flex flex-col p-0 gap-0 overflow-hidden",
-            "bg-[#0a0a0b] dark:bg-[#111111] border border-[#d6a738]/40 rounded-[2.5rem]",
+            "bg-white dark:bg-[#0a0a0b] border border-[#d6a738]/30 dark:border-[#d6a738]/40 rounded-[2.5rem]",
             "shadow-[0_0_50px_rgba(214,167,56,0.15)] outline-none duration-500 transition-all",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
@@ -212,7 +213,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
           )}
         >
 
-          <DialogHeader className="px-6 sm:px-8 py-5 sm:py-6 border-b border-neutral-800 shrink-0 bg-[#0a0a0b] flex flex-col gap-4">
+          <DialogHeader className="px-6 sm:px-8 py-5 sm:py-6 border-b border-[#e5ddd3] dark:border-neutral-800 shrink-0 bg-[#fdfcf5] dark:bg-[#0a0a0b] flex flex-col gap-4">
             {/* Fila Superior: Icono, Título, [Botón Agregar en PC] y CERRAR */}
             <div className="flex items-center justify-between w-full">
               <div className="flex items-center gap-3 sm:gap-4 flex-1">
@@ -220,7 +221,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
                   <Music size={22} className="sm:hidden" />
                   <Music size={26} className="hidden sm:block" />
                 </div>
-                <DialogTitle className="text-sm sm:text-base font-black text-white tracking-tight leading-none whitespace-nowrap">
+                <DialogTitle className="text-sm sm:text-base font-black text-[#4a3f36] dark:text-white tracking-tight leading-none whitespace-nowrap">
                   Banco de Alabanzas
                 </DialogTitle>
 
@@ -246,7 +247,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
 
                 <button
                   onClick={onClose}
-                  className="h-10 w-10 flex items-center justify-center rounded-full bg-white/5 dark:bg-white/10 hover:bg-white/20 text-[#d6a738] transition-all shrink-0"
+                  className="h-10 w-10 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-white/10 hover:bg-neutral-200 dark:hover:bg-white/20 text-[#d6a738] transition-all shrink-0"
                 >
                   <X size={20} strokeWidth={3} />
                 </button>
@@ -275,7 +276,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden flex flex-col bg-[#0a0a0b]">
+          <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-[#0a0a0b]">
             {isAdding ? (
               <div className="flex-1 overflow-y-auto px-6 py-10 custom-scrollbar">
                 <div className="max-w-3xl mx-auto">
@@ -389,7 +390,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
               </div>
             ) : (
               <>
-                <div className="px-6 sm:px-8 py-4 flex flex-col sm:flex-row gap-3 border-b border-neutral-800 bg-[#0a0a0b]/50">
+                <div className="px-6 sm:px-8 py-4 flex flex-col sm:flex-row gap-3 border-b border-[#e5ddd3] dark:border-neutral-800 bg-[#f4efe8] dark:bg-[#0a0a0b]/50">
                   <div className="relative flex-1 group">
                     <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#d6a738] transition-colors" />
                     <input
@@ -397,7 +398,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
                       placeholder="Buscar por nombre de alabanza..."
                       value={busqueda}
                       onChange={e => setBusqueda(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 bg-neutral-900/50 border border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-xs font-bold shadow-sm outline-none focus:ring-4 focus:ring-[#d6a738]/10 text-white placeholder:text-gray-600 transition-all"
+                      className="w-full pl-12 pr-4 py-3 bg-[#fdfcf5] dark:bg-neutral-900/50 border border-[#e5ddd3] dark:border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-xs font-bold shadow-sm outline-none focus:ring-4 focus:ring-[#d6a738]/10 text-[#4a3f36] dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600 transition-all"
                     />
                   </div>
                   <div className="relative min-w-full sm:min-w-[240px]">
@@ -405,10 +406,10 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
                     <select
                       value={filtroTipo}
                       onChange={e => setFiltroTipo(e.target.value)}
-                      className="w-full pl-11 pr-8 py-3 bg-neutral-900/50 border border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none focus:ring-4 focus:ring-[#d6a738]/10 text-white transition-all"
+                      className="w-full pl-11 pr-8 py-3 bg-[#fdfcf5] dark:bg-neutral-900/50 border border-[#e5ddd3] dark:border-neutral-800 focus:border-[#d6a738]/50 rounded-xl text-[9px] font-black uppercase tracking-widest outline-none cursor-pointer appearance-none focus:ring-4 focus:ring-[#d6a738]/10 text-[#4a3f36] dark:text-white transition-all"
                     >
-                      <option value="" className="bg-neutral-900 text-white">TODAS</option>
-                      {TIPOS_ALABANZA.map(t => <option key={t} value={t} className="bg-neutral-900 text-white">{t.toUpperCase()}</option>)}
+                      <option value="" className="bg-[#fdfcf5] dark:bg-neutral-900 text-[#4a3f36] dark:text-white">TODAS</option>
+                      {TIPOS_ALABANZA.map(t => <option key={t} value={t} className="bg-[#fdfcf5] dark:bg-neutral-900 text-[#4a3f36] dark:text-white">{t.toUpperCase()}</option>)}
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
                       <ChevronDown size={14} />
@@ -437,9 +438,9 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
                       {alabanzasFiltradas.map(a => {
                         const config = getTipoConfig(a.tipo);
                         return (
-                          <div key={a.id} className="group bg-neutral-900/40 rounded-2xl border border-neutral-800 hover:border-[#d6a738]/50 transition-all shadow-sm hover:shadow-lg hover:shadow-[#d6a738]/5 hover:-translate-y-1 duration-300 overflow-hidden flex flex-col text-center relative">
+                          <div key={a.id} className="group bg-white dark:bg-neutral-900/40 rounded-2xl border border-neutral-200 dark:border-neutral-800 hover:border-[#d6a738]/50 transition-all shadow-sm hover:shadow-lg hover:shadow-[#d6a738]/5 hover:-translate-y-1 duration-300 overflow-hidden flex flex-col text-center relative">
                             {/* Tipo y Acciones (Encabezado superior integrado) */}
-                            <div className={`${config.bgColor} border-b border-neutral-800/50 px-3 py-2 flex items-center justify-between`}>
+                            <div className={`${config.bgColor} border-b border-neutral-200/50 dark:border-neutral-800/50 px-3 py-2 flex items-center justify-between`}>
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleEdit(a); }}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-black/20 dark:hover:bg-white/10 text-gray-500 hover:text-amber-500 transition-all"
@@ -463,7 +464,7 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
 
                             {/* Cuerpo Principal */}
                             <div className="flex-1 flex flex-col items-center gap-3 p-5">
-                              <h4 className="text-base font-bold text-white leading-snug group-hover:text-[#d6a738] transition-colors uppercase tracking-tight min-h-[2.5rem] line-clamp-2 w-full">
+                              <h4 className="text-base font-bold text-[#4a3f36] dark:text-white leading-snug group-hover:text-[#d6a738] transition-colors uppercase tracking-tight min-h-[2.5rem] line-clamp-2 w-full">
                                 {a.nombre}
                               </h4>
 
@@ -474,19 +475,19 @@ export default function RegistroAlabanzas({ isOpen, onClose }: RegistroAlabanzas
                               )}
                             </div>
                             {/* Datos Técnicos (Inferior) */}
-                            <div className="bg-black/20 border-t border-neutral-800 grid grid-cols-3 divide-x divide-neutral-800/50">
+                            <div className="bg-[#fdfcf5] dark:bg-black/20 border-t border-[#e5ddd3] dark:border-neutral-800 grid grid-cols-3 divide-x divide-[#e5ddd3] dark:divide-neutral-800/50">
                               <div className="flex flex-col items-center py-3 px-2">
                                 <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">BPM</span>
-                                <span className="text-[12px] font-black text-gray-400 leading-none">{a.bpm || '--'}</span>
+                                <span className="text-[12px] font-black text-[#847563] dark:text-gray-400 leading-none">{a.bpm || '--'}</span>
                               </div>
 
                               <div className="flex flex-col items-center py-3 px-2">
-                                <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">TONO</span>
+                                <span className="text-[8px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-tighter mb-0.5">TONO</span>
                                 <span className="text-[12px] font-black text-[#d6a738] leading-none truncate w-full text-center px-1 uppercase tracking-tighter">{a.tonalidad || '--'}</span>
                               </div>
                               <div className="flex flex-col items-center py-3 px-2">
-                                <span className="text-[8px] font-black text-gray-600 uppercase tracking-tighter mb-0.5">COMPÁS</span>
-                                <span className="text-[12px] font-black text-gray-400 leading-none">{a.compas || '4/4'}</span>
+                                <span className="text-[8px] font-black text-gray-400 dark:text-gray-600 uppercase tracking-tighter mb-0.5">COMPÁS</span>
+                                <span className="text-[12px] font-black text-[#847563] dark:text-gray-400 leading-none">{a.compas || '4/4'}</span>
                               </div>
                             </div>
                           </div>
