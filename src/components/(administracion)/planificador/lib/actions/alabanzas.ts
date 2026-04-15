@@ -4,7 +4,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { checkIsJefe } from './core';
-import { sendPushToRoles } from '@/utils/push-utils';
+import { sendPushToUsers } from '@/utils/push-utils';
 
 // Helper local para instanciar el cliente con privilegios
 function getAdminClient() {
@@ -162,16 +162,40 @@ export async function sincronizarRepertorioActividad(actividad_id: string, alaba
 
     if (insertError) throw new Error(insertError.message);
 
-    // 3. Notificar a los roles estratégicos sobre el nuevo repertorio
+    // 3. Notificar a los roles estratégicos y jefes operativos sobre el nuevo repertorio
     try {
-      // Usamos las variaciones más comunes por precaución con mayúsculas/minúsculas en tu base de datos
-      const rolesANotificar = ['lider', 'Líder', 'Lider', 'LIDER', 'admin', 'Admin', 'ADMIN', 'super', 'Super', 'SUPER'];
+      const supabaseAdmin = getAdminClient();
+      const userIdsANotificar = new Set<string>();
+
+      // a) Obtener todos los admin/super
+      const { data: admins } = await supabaseAdmin
+        .from('profiles')
+        .select('id')
+        .in('rol', ['admin', 'super', 'ADMIN', 'SUPER']);
       
-      await sendPushToRoles(rolesANotificar, {
-        title: "Repertorio de Alabanzas",
-        body: `El departamento de Alabanza creó/modificó un repertorio para: ${actividad.title || 'Desconocida'}`,
-        url: "/kore/planificador"
-      });
+      if (admins) {
+        admins.forEach((u: any) => userIdsANotificar.add(u.id));
+      }
+
+      // b) Obtener todos los jefes operativos (líderes)
+      const { data: jefes } = await supabaseAdmin
+        .from('puesto')
+        .select('usuario_id')
+        .eq('es_jefatura', true);
+
+      if (jefes) {
+        jefes.forEach((j: any) => {
+          if (j.usuario_id) userIdsANotificar.add(j.usuario_id);
+        });
+      }
+
+      if (userIdsANotificar.size > 0) {
+        await sendPushToUsers(Array.from(userIdsANotificar), {
+          title: "Repertorio de Alabanzas",
+          body: `El departamento de Alabanza creó/modificó un repertorio para: ${actividad.title || 'Desconocida'}`,
+          url: "/kore/planificador"
+        });
+      }
     } catch (err) {
       console.error("Error enviando notificación push de repertorio:", err);
     }

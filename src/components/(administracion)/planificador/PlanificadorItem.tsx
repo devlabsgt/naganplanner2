@@ -27,6 +27,7 @@ interface Props {
   isJefe: boolean;
   modulo: string;
   tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas';
+  departamentosEquipo?: any[];
 }
 
 export default function PlanificadorItem({
@@ -37,7 +38,8 @@ export default function PlanificadorItem({
   usuarios,
   isJefe,
   modulo,
-  tipoVista
+  tipoVista,
+  departamentosEquipo = []
 }: Props) {
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -537,6 +539,7 @@ export default function PlanificadorItem({
           isJefe={isJefe}
           modulo={modulo}
           tipoVista={tipoVista}
+          departamentosEquipo={departamentosEquipo}
         />
       )}
     </>

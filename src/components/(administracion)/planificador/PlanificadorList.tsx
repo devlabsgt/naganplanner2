@@ -242,6 +242,7 @@ export default function PlanificadorList({ initialData, tipoVista, modulo }: Pro
                   isJefe={isJefe}
                   modulo={modulo}
                   tipoVista={tipoVista}
+                  departamentosEquipo={departamentosEquipo}
                 />
               ))}
             </div>
