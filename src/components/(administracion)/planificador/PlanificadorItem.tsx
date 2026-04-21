@@ -13,10 +13,18 @@ import FilaIntegrante from './FilaIntegrante';
 import PlanificadorChecklist from './PlanificadorChecklist';
 import GestorArchivos from './modals/GestorArchivos';
 import GestorVideo from './modals/GestorVideo';
+import GestorDrive from './modals/GestorDrive';
 import GestorAlabanzaActividad from './modals/GestorAlabanzaActividad';
 import ModalRepertorioActividad from './modals/ModalRepertorioActividad';
 import { obtenerRepertoriosDelMismoDia } from './lib/actions';
 import Swal from 'sweetalert2';
+
+type DeptoEquipo = {
+  id: string;
+  nombre: string;
+  miembros: string[];
+  parent_id?: string | null;
+};
 
 interface Props {
   planificador: Planificador;
@@ -27,7 +35,7 @@ interface Props {
   isJefe: boolean;
   modulo: string;
   tipoVista: 'mis_actividades' | 'mi_equipo' | 'todas';
-  departamentosEquipo?: any[];
+  departamentosEquipo?: DeptoEquipo[];
 }
 
 export default function PlanificadorItem({
@@ -45,6 +53,7 @@ export default function PlanificadorItem({
 
   const [forceShowFiles, setForceShowFiles] = useState(false);
   const [forceShowVideos, setForceShowVideos] = useState(false);
+  const [forceShowDrive, setForceShowDrive] = useState(false);
   const [forceShowAlabanzas, setForceShowAlabanzas] = useState(false);
   const [modalRepertorioOpen, setModalRepertorioOpen] = useState(false);
 
@@ -121,10 +130,12 @@ export default function PlanificadorItem({
   const checklistSeguro = planificador.checklist ?? [];
   const adjuntosSeguros = planificador.archivos_pdf ?? [];
   const videosSeguros = planificador.videos_url ?? [];
+  const driveSeguros = planificador.archivos_drive ?? [];
   const alabanzasSeguras = (planificador as any).alabanzas ?? [];
 
   const showFiles = adjuntosSeguros.length > 0 || forceShowFiles;
   const showVideos = videosSeguros.length > 0 || forceShowVideos;
+  const showDrive = driveSeguros.length > 0 || forceShowDrive;
   const showAlabanzas = alabanzasSeguras.length > 0 || forceShowAlabanzas;
 
   const handleBuscarRepertorios = async () => {
@@ -301,8 +312,8 @@ export default function PlanificadorItem({
                 />
               )}
 
-              {puedeGestionarContenido && (!showFiles || !showVideos) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 animate-in fade-in slide-in-from-top-2">
+              {puedeGestionarContenido && (!showFiles || !showVideos || !showDrive) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-3 animate-in fade-in slide-in-from-top-2">
                   {!showFiles && (
                     <button
                       onClick={() => setForceShowFiles(true)}
@@ -325,10 +336,21 @@ export default function PlanificadorItem({
                       </span>
                     </button>
                   )}
+                  {!showDrive && (
+                    <button
+                      onClick={() => setForceShowDrive(true)}
+                      className="group flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-300 dark:border-neutral-700 hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50/50 dark:hover:bg-green-900/10 transition-all duration-200 active:scale-95 hover:-translate-y-0.5 hover:shadow-sm"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 group-hover:text-green-500 transition-colors group-hover:scale-110"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                      <span className="text-sm font-bold text-gray-500 dark:text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400">
+                        Vincular Drive
+                      </span>
+                    </button>
+                  )}
                   {!showAlabanzas && (
                     <button
                       onClick={() => setForceShowAlabanzas(true)}
-                      className="group flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-300 dark:border-[#2a2624] hover:border-[#d6a738] dark:hover:border-[#d6a738] hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-all duration-200 active:scale-95 hover:-translate-y-0.5 hover:shadow-sm sm:col-span-2"
+                      className="group flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-dashed border-gray-300 dark:border-[#2a2624] hover:border-[#d6a738] dark:hover:border-[#d6a738] hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-all duration-200 active:scale-95 hover:-translate-y-0.5 hover:shadow-sm sm:col-span-full"
                     >
                       <Music size={18} className="text-gray-400 group-hover:text-[#d6a738] transition-colors group-hover:scale-110" />
                       <span className="text-sm font-bold text-gray-500 dark:text-gray-400 group-hover:text-[#d6a738] dark:group-hover:text-[#d6a738]">
@@ -481,6 +503,25 @@ export default function PlanificadorItem({
                   <GestorVideo
                     actividadId={planificador.id}
                     videosIniciales={videosSeguros}
+                    readonly={!puedeGestionarContenido}
+                  />
+                </div>
+              )}
+
+              {showDrive && (
+                <div className="relative mt-2 animate-in fade-in slide-in-from-top-2">
+                  {forceShowDrive && driveSeguros.length === 0 && (
+                    <button
+                      onClick={() => setForceShowDrive(false)}
+                      className="absolute top-2 right-0 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all z-10 active:scale-90"
+                      title="Cancelar archivo Drive"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                  <GestorDrive
+                    actividadId={planificador.id}
+                    archivosIniciales={driveSeguros}
                     readonly={!puedeGestionarContenido}
                   />
                 </div>

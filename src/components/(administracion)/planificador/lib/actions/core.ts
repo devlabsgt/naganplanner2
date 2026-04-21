@@ -234,15 +234,28 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
     checklist: parsed.data.checklist || [],
     modulo: parsed.data.modulo || null,
     status: parsed.data.status,
-    videos_url: parsed.data.videos_url || []
+    videos_url: parsed.data.videos_url || [],
+    archivos_drive: parsed.data.archivos_drive || []
   };
 
   let actividadId = idEdicion;
   let integrantesAnteriores: any[] = [];
+  let reprogramada = false;
 
   if (idEdicion) {
     const { data: tareaActual } = await supabase.from('act_actividades').select('*').eq('id', idEdicion).single();
     if (!tareaActual) throw new Error('Planificador no encontrado');
+
+    // Verificar si la fecha fue cambiada
+    if (tareaActual.due_date && fechaVencimiento) {
+      const d1 = new Date(tareaActual.due_date).getTime();
+      const d2 = new Date(fechaVencimiento).getTime();
+      if (!isNaN(d1) && !isNaN(d2) && d1 !== d2) {
+        reprogramada = true;
+      }
+    } else if (tareaActual.due_date !== fechaVencimiento) {
+      reprogramada = true;
+    }
 
     const esActividadPasada = tareaActual.due_date && new Date(tareaActual.due_date) < new Date();
 
@@ -256,6 +269,8 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
       payloadActividad.modulo = tareaActual.modulo;
       payloadActividad.status = tareaActual.status;
       payloadActividad.videos_url = tareaActual.videos_url || [];
+      payloadActividad.archivos_drive = tareaActual.archivos_drive || [];
+      reprogramada = false; // Sin permisos no cambia la fecha real
     }
 
     const { data: intAnt } = await supabase.from('act_integrantes').select('*').eq('actividad_id', idEdicion);
@@ -288,11 +303,14 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
 
       const esNuevoRealmente = int.es_nuevo || !existente;
 
-      if (esNuevoRealmente) {
+      if (esNuevoRealmente || reprogramada) {
         estadoInvitacion = null;
         motivoRechazo = null;
         if (int.usuario_id !== user.id) {
-          usuariosANotificar.push(int.usuario_id);
+          // Asegurarnos de no duplicar notificaciones si pasa de nuevo (solo por si acaso)
+          if (!usuariosANotificar.includes(int.usuario_id)) {
+            usuariosANotificar.push(int.usuario_id);
+          }
         }
       }
 
@@ -316,10 +334,18 @@ export async function guardarPlanificador(data: PlanificadorForm, idEdicion?: st
     if (errorIntegrantes) throw new Error(errorIntegrantes.message);
 
     if (usuariosANotificar.length > 0) {
+      const msgTitle = reprogramada 
+          ? "Actividad Reprogramada" 
+          : (idEdicion ? "Te han añadido a una actividad" : "Nueva Actividad Asignada");
+          
+      const msgBody = reprogramada
+          ? `La fecha de la actividad "${tituloMayusculas}" ha cambiado. Verifica los detalles y confirmación.`
+          : `Has sido asignado a la actividad: ${tituloMayusculas}`;
+
       try {
         await sendPushToUsers(usuariosANotificar, {
-          title: idEdicion ? "Te han añadido a una actividad" : "Nueva Actividad Asignada",
-          body: `Has sido asignado a la actividad: ${tituloMayusculas}`,
+          title: msgTitle,
+          body: msgBody,
           url: "/kore/planificador"
         });
       } catch (err) {

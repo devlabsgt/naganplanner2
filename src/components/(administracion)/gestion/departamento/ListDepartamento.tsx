@@ -229,6 +229,7 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
   const [currentNode, setCurrentNode] = useState<DepartamentoNode | null>(null);
   const [parentId, setParentId] = useState<string | null>(null);
   const [nombre, setNombre] = useState("");
+  const [orden, setOrden] = useState<number | "">("");
 
   const [isPuestoModalOpen, setIsPuestoModalOpen] = useState(false);
   const [selectedDepa, setSelectedDepa] = useState<{ id: string, nombre: string } | null>(null);
@@ -267,11 +268,35 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
 
   const handleOpenAssignUser = (puesto: Puesto) => { setSelectedPuestoForAssign(puesto); setIsAssignModalOpen(true); };
 
-  const openCreateRoot = () => { setMode("crear"); setParentId(null); setCurrentNode(null); setNombre(""); setIsModalOpen(true); };
-  const openCreateChild = (padre: DepartamentoNode) => { setMode("crear"); setParentId(padre.id); setCurrentNode(padre); setNombre(""); setIsModalOpen(true); };
-  const openEdit = (node: DepartamentoNode) => { setMode("editar"); setCurrentNode(node); setNombre(node.nombre); setIsModalOpen(true); };
-  const closeModal = () => { setIsModalOpen(false); setNombre(""); };
-  const handleSave = () => { if (!nombre.trim()) return Toast.fire({ icon: "warning", title: "Nombre vacío" }); if (mode === "crear") crear({ nombre, parent_id: parentId }, { onSuccess: closeModal }); else if (currentNode) actualizar({ id: currentNode.id, values: { nombre, parent_id: currentNode.parent_id } }, { onSuccess: closeModal }); };
+  const openCreateRoot = () => { setMode("crear"); setParentId(null); setCurrentNode(null); setNombre(""); setOrden(""); setIsModalOpen(true); };
+  const openCreateChild = (padre: DepartamentoNode) => { setMode("crear"); setParentId(padre.id); setCurrentNode(padre); setNombre(""); setOrden(""); setIsModalOpen(true); };
+  const openEdit = (node: DepartamentoNode) => { setMode("editar"); setCurrentNode(node); setNombre(node.nombre); setOrden(node.orden ?? ""); setIsModalOpen(true); };
+  const closeModal = () => { setIsModalOpen(false); setNombre(""); setOrden(""); };
+  const handleSave = () => {
+    if (!nombre.trim()) return Toast.fire({ icon: "warning", title: "Nombre vacío" });
+    const ordenValue = orden !== "" ? Number(orden) : undefined;
+    
+    if (mode === "crear") {
+      crear({ nombre, parent_id: parentId, orden: ordenValue }, { onSuccess: closeModal });
+    } else if (currentNode) {
+      if (ordenValue !== undefined) {
+        const hermanos = data?.flat?.filter(d => d.parent_id === currentNode.parent_id) || [];
+        const totalInLevel = hermanos.length;
+        
+        if (ordenValue > totalInLevel) {
+          return Toast.fire({ icon: "warning", title: `El correlativo máximo permitido es ${totalInLevel}.` });
+        }
+        
+        const isDuplicate = hermanos.some(
+          d => d.id !== currentNode.id && d.orden === ordenValue
+        );
+        if (isDuplicate) {
+          return Toast.fire({ icon: "warning", title: "Este nivel ya tiene un departamento con ese número." });
+        }
+      }
+      actualizar({ id: currentNode.id, values: { nombre, parent_id: currentNode.parent_id, orden: ordenValue } }, { onSuccess: closeModal });
+    }
+  };
 
   const handleDeleteDepartamento = (id: string) => {
     Swal.fire({
@@ -362,6 +387,24 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
                   onKeyDown={e => e.key === 'Enter' && handleSave()} 
                 />
               </div>
+              {mode === "editar" && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    Orden / Correlativo
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={orden}
+                    onChange={(e) => setOrden(e.target.value === "" ? "" : Number(e.target.value))}
+                    className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
+                    placeholder=""
+                  />
+                  <p className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                    Cambia el número para reordenar dentro de su nivel.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-950/50 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2">

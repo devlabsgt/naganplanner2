@@ -37,6 +37,14 @@ export function useDepartamentos(initialData?: DepartamentoRow[]) {
             rootItems.push(node);
           }
         });
+
+        // Ordenar cada nivel por el campo `orden`
+        const sortLevel = (nodes: DepartamentoNode[]) => {
+          nodes.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+          nodes.forEach(n => n.children && sortLevel(n.children));
+        };
+        sortLevel(rootItems);
+
         return rootItems;
       };
 

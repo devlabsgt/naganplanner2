@@ -16,6 +16,8 @@ import {
   eliminarVideo,
   guardarAdjunto,
   eliminarAdjunto,
+  guardarDrive,
+  eliminarDrive,
   // Importaciones para el Gestor de Equipos
   obtenerPlantillasEquipos,
   guardarPlantillaEquipo,
@@ -147,6 +149,17 @@ export const usePlanificadorMutations = () => {
     onSuccess: invalidar,
   });
 
+  // --- Mutaciones de Drive ---
+  const mutationAgregarDrive = useMutation({
+    mutationFn: ({ id, archivo }: { id: string, archivo: { id: string, nombre: string, url: string } }) => guardarDrive(id, archivo),
+    onSuccess: invalidar,
+  });
+
+  const mutationBorrarDrive = useMutation({
+    mutationFn: ({ id, driveId }: { id: string, driveId: string }) => eliminarDrive(id, driveId),
+    onSuccess: invalidar,
+  });
+
   return {
     guardar,
     eliminar,
@@ -158,6 +171,8 @@ export const usePlanificadorMutations = () => {
     borrarVideo: mutationBorrarVideo,
     agregarAdjunto: mutationAgregarAdjunto,
     borrarAdjunto: mutationBorrarAdjunto,
+    agregarDrive: mutationAgregarDrive,
+    borrarDrive: mutationBorrarDrive,
     marcarAsistencia,
 
     sincronizarRepertorio: useMutation({
@@ -170,7 +185,7 @@ export const usePlanificadorMutations = () => {
     }),
     isLoading: guardar.isPending || eliminar.isPending || responderInvitacion.isPending ||
       darDeBaja.isPending || sustituirMiembro.isPending || updateChecklist.isPending ||
-      mutationAgregarVideo.isPending || mutationAgregarAdjunto.isPending
+      mutationAgregarVideo.isPending || mutationAgregarAdjunto.isPending || mutationAgregarDrive.isPending
   };
 };
 

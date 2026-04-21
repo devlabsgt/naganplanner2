@@ -20,9 +20,17 @@ export const videoSchema = z.object({
   url: z.string()
 });
 
+// --- Schema para Archivos de Drive ---
+export const driveSchema = z.object({
+  id: z.string(), 
+  nombre: z.string(),
+  url: z.string()
+});
+
 export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 export type Adjunto = z.infer<typeof adjuntoSchema>;
 export type VideoAdjunto = z.infer<typeof videoSchema>;
+export type ArchivoDrive = z.infer<typeof driveSchema>;
 
 // 1. Schema para lectura de un Integrante
 export const integranteSchema = z.object({
@@ -60,6 +68,8 @@ export const planificadorSchema = z.object({
   
   videos_url: z.array(videoSchema).nullable().optional().default([]),
 
+  archivos_drive: z.array(driveSchema).nullable().optional().default([]),
+
   alabanzas: z.array(z.object({
     id: z.string().uuid(),
     nombre: z.string(),
@@ -95,6 +105,8 @@ export const planificadorFormSchema = z.object({
   checklist: z.array(checklistItemSchema).optional().default([]),
   
   videos_url: z.array(videoSchema).optional().default([]),
+
+  archivos_drive: z.array(driveSchema).optional().default([]),
 
   alabanzas: z.array(z.object({
     id: z.string().uuid(),

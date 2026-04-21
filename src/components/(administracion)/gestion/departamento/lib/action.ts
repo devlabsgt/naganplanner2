@@ -10,7 +10,7 @@ export async function getDepartamentos() {
   const { data: deptos, error: deptoError } = await supabase
     .from("departamento")
     .select("*") 
-    .order("nombre", { ascending: true });
+    .order("orden", { ascending: true });
 
   if (deptoError) throw new Error(deptoError.message);
   if (!deptos || deptos.length === 0) return [];
@@ -66,12 +66,34 @@ export async function createDepartamento(values: DepartamentoFormValues) {
   }
 
   const supabase = await createClient();
+
+  // Auto-asignar el siguiente orden disponible entre hermanos
+  let ordenFinal = result.data.orden;
+  if (!ordenFinal) {
+    const parentId = result.data.parent_id || null;
+    const query = supabase
+      .from("departamento")
+      .select("orden")
+      .order("orden", { ascending: false })
+      .limit(1);
+
+    if (parentId) {
+      query.eq("parent_id", parentId);
+    } else {
+      query.is("parent_id", null);
+    }
+
+    const { data: hermanos } = await query;
+    ordenFinal = hermanos && hermanos.length > 0 ? (hermanos[0].orden ?? 0) + 1 : 1;
+  }
+
   const { data, error } = await supabase
     .from("departamento")
     .insert({
       nombre: result.data.nombre,
       parent_id: result.data.parent_id || null, 
       jefe_id: result.data.jefe_id || null,
+      orden: ordenFinal,
     })
     .select()
     .single();
@@ -93,6 +115,7 @@ export async function updateDepartamento(id: string, values: DepartamentoFormVal
     .update({
       nombre: result.data.nombre,
       parent_id: result.data.parent_id || null,
+      ...(result.data.orden !== undefined && { orden: result.data.orden }),
     })
     .eq("id", id)
     .select()
