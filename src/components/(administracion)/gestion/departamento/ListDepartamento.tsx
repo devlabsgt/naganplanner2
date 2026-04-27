@@ -3,14 +3,16 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
 import {
-  ChevronRight, ChevronDown, Plus, Pencil, Trash2, Crown, X, Briefcase, UserPlus, User, UserX, UserCheck
+  ChevronRight, ChevronDown, Plus, Pencil, Trash2, Crown, X, Briefcase, UserPlus, User, UserX, UserCheck, ArrowUp, ArrowDown, ChevronsUp, ChevronsDown
 } from "lucide-react";
 
 import {
   useDepartamentos,
   useCreateDepartamento,
   useUpdateDepartamento,
-  useDeleteDepartamento
+  useDeleteDepartamento,
+  useSwapDepartamento,
+  useShiftDepartamento
 } from "./lib/hooks";
 
 import {
@@ -140,15 +142,16 @@ const PuestoItem = ({ puesto, onEdit, onDelete, onAssignUser, parentColor }: any
   );
 };
 
-const DepartmentItem = ({ node, prefix, depth, onAdd, onEdit, onDelete, onAsignarPuesto, onEditPuesto, onDeletePuesto, onAssignUserToPuesto }: any) => {
+const DepartmentItem = ({ node, prefix, depth, totalSiblings, onMove, onAdd, onEdit, onDelete, onAsignarPuesto, onEditPuesto, onDeletePuesto, onAssignUserToPuesto }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const hasChildren = (node.children && node.children.length > 0);
   const hasPuestos = (node.puestos && node.puestos.length > 0);
   const hasContent = hasChildren || hasPuestos;
   const styles = getLevelStyles(depth);
 
   return (
-    <div className="flex flex-col w-full relative">
+    <div className={`flex flex-col w-full relative ${menuOpen ? 'z-50' : 'z-0'}`}>
       <div
         className="flex items-center justify-between p-3 sm:p-4 border-b border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 transition-colors group cursor-pointer"
         onClick={() => hasContent && setIsOpen(!isOpen)}
@@ -161,7 +164,45 @@ const DepartmentItem = ({ node, prefix, depth, onAdd, onEdit, onDelete, onAsigna
               </div>
             ) : <span className="w-4" />}
           </div>
-          <span className={`px-1.5 py-0.5 text-[10px] font-bold border rounded shrink-0 ${styles.badge}`}>{prefix}</span>
+          <div className="relative" onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}>
+            <span className={`px-1.5 py-0.5 text-[10px] font-bold border rounded shrink-0 cursor-pointer hover:opacity-80 transition-opacity ${styles.badge}`}>{prefix}</span>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setMenuOpen(false); }} />
+                <div className="absolute top-full left-0 mt-1 w-44 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl z-50 py-1 flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                  <button
+                    disabled={node.orden === 1}
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onMove(node, 'up'); }}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-full text-left"
+                  >
+                    <ArrowUp size={14} className="text-zinc-400" /> Mover arriba
+                  </button>
+                  <button
+                    disabled={node.orden === totalSiblings}
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onMove(node, 'down'); }}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-full text-left"
+                  >
+                    <ArrowDown size={14} className="text-zinc-400" /> Mover abajo
+                  </button>
+                  <div className="h-px w-full bg-zinc-200 dark:bg-zinc-800 my-1" />
+                  <button
+                    disabled={node.orden === 1}
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onMove(node, 'start'); }}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-full text-left"
+                  >
+                    <ChevronsUp size={14} className="text-zinc-400" /> Mover al inicio
+                  </button>
+                  <button
+                    disabled={node.orden === totalSiblings}
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onMove(node, 'end'); }}
+                    className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors w-full text-left"
+                  >
+                    <ChevronsDown size={14} className="text-zinc-400" /> Mover al final
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
           <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 uppercase truncate">{node.nombre}</span>
         </div>
 
@@ -172,9 +213,17 @@ const DepartmentItem = ({ node, prefix, depth, onAdd, onEdit, onDelete, onAsigna
           <button onClick={() => onAsignarPuesto(node)} className="sm:hidden p-2 text-amber-600 dark:text-amber-500"><Briefcase size={16} /></button>
           <button onClick={() => onAdd(node)} className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-green-600 dark:hover:text-green-400"><Plus size={18} /></button>
           <button onClick={() => onEdit(node)} className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-blue-600 dark:hover:text-blue-400"><Pencil size={16} /></button>
-          {!hasContent && (
-            <button onClick={() => onDelete(node.id)} className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400"><Trash2 size={16} /></button>
-          )}
+          <button 
+            disabled={hasContent}
+            onClick={() => onDelete(node.id)} 
+            className={`p-2 transition-colors ${
+              hasContent 
+                ? "text-zinc-300 dark:text-zinc-700 cursor-not-allowed" 
+                : "text-zinc-500 dark:text-zinc-400 hover:text-red-600 dark:hover:text-red-400"
+            }`}
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       </div>
 
@@ -205,6 +254,7 @@ const DepartmentItem = ({ node, prefix, depth, onAdd, onEdit, onDelete, onAsigna
               />
               <DepartmentItem
                 node={child} prefix={`${prefix}.${index + 1}`} depth={depth + 1}
+                totalSiblings={node.children.length} onMove={onMove}
                 onAdd={onAdd} onEdit={onEdit} onDelete={onDelete}
                 onAsignarPuesto={onAsignarPuesto} onEditPuesto={onEditPuesto} onDeletePuesto={onDeletePuesto}
                 onAssignUserToPuesto={onAssignUserToPuesto}
@@ -223,6 +273,26 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
   const { mutate: actualizar } = useUpdateDepartamento();
   const { mutate: eliminar } = useDeleteDepartamento();
   const { mutate: eliminarPuesto } = useDeletePuesto();
+  const { mutate: intercambiar } = useSwapDepartamento();
+  const { mutate: shift } = useShiftDepartamento();
+
+  const handleMove = (node: DepartamentoNode, action: 'up' | 'down' | 'start' | 'end') => {
+    const hermanos = data?.flat?.filter(d => d.parent_id === node.parent_id) || [];
+    const total = hermanos.length;
+    const currentOrden = node.orden ?? 1;
+
+    if (action === 'up' && currentOrden > 1) {
+      const prev = hermanos.find(h => h.orden === currentOrden - 1);
+      if (prev) intercambiar({ id1: node.id, orden1: currentOrden - 1, id2: prev.id, orden2: currentOrden });
+    } else if (action === 'down' && currentOrden < total) {
+      const next = hermanos.find(h => h.orden === currentOrden + 1);
+      if (next) intercambiar({ id1: node.id, orden1: currentOrden + 1, id2: next.id, orden2: currentOrden });
+    } else if (action === 'start' && currentOrden > 1) {
+      shift({ id: node.id, parentId: node.parent_id || null, oldOrden: currentOrden, newOrden: 1 });
+    } else if (action === 'end' && currentOrden < total) {
+      shift({ id: node.id, parentId: node.parent_id || null, oldOrden: currentOrden, newOrden: total });
+    }
+  };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mode, setMode] = useState<"crear" | "editar">("crear");
@@ -275,23 +345,52 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
   const handleSave = () => {
     if (!nombre.trim()) return Toast.fire({ icon: "warning", title: "Nombre vacío" });
     const ordenValue = orden !== "" ? Number(orden) : undefined;
-    
+
     if (mode === "crear") {
       crear({ nombre, parent_id: parentId, orden: ordenValue }, { onSuccess: closeModal });
     } else if (currentNode) {
       if (ordenValue !== undefined) {
         const hermanos = data?.flat?.filter(d => d.parent_id === currentNode.parent_id) || [];
         const totalInLevel = hermanos.length;
-        
+
         if (ordenValue > totalInLevel) {
           return Toast.fire({ icon: "warning", title: `El correlativo máximo permitido es ${totalInLevel}.` });
         }
-        
-        const isDuplicate = hermanos.some(
+
+        const duplicateNode = hermanos.find(
           d => d.id !== currentNode.id && d.orden === ordenValue
         );
-        if (isDuplicate) {
-          return Toast.fire({ icon: "warning", title: "Este nivel ya tiene un departamento con ese número." });
+        if (duplicateNode) {
+          Swal.fire({
+            title: "¿Intercambiar posiciones?",
+            text: `El correlativo ${ordenValue} ya está asignado a "${duplicateNode.nombre}". ¿Deseas intercambiar sus posiciones?`,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Sí, intercambiar",
+            cancelButtonText: "Cancelar",
+            background: document.documentElement.classList.contains('dark') ? '#18181b' : '#fff',
+            color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
+            confirmButtonColor: '#9333ea',
+          }).then((result) => {
+            if (result.isConfirmed) {
+              intercambiar({
+                id1: currentNode.id,
+                orden1: ordenValue,
+                id2: duplicateNode.id,
+                orden2: currentNode.orden ?? 1
+              }, {
+                onSuccess: () => {
+                  Toast.fire({ icon: "success", title: "Posiciones intercambiadas." });
+                  if (nombre !== currentNode.nombre) {
+                    actualizar({ id: currentNode.id, values: { nombre, parent_id: currentNode.parent_id } }, { onSuccess: closeModal });
+                  } else {
+                    closeModal();
+                  }
+                }
+              });
+            }
+          });
+          return;
         }
       }
       actualizar({ id: currentNode.id, values: { nombre, parent_id: currentNode.parent_id, orden: ordenValue } }, { onSuccess: closeModal });
@@ -337,9 +436,9 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
         </button>
       </div>
 
-      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden overflow-x-auto shadow-sm">
+      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm">
         <div className="min-w-[320px]">
-          <div className="flex justify-between items-center px-4 sm:px-6 py-3 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800">
+          <div className="flex justify-between items-center px-4 sm:px-6 py-3 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-200 dark:border-zinc-800 rounded-t-xl">
             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Estructura</span>
             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Acciones</span>
           </div>
@@ -347,6 +446,7 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
             {data?.tree?.map((n, index) => (
               <DepartmentItem
                 key={n.id} node={n} prefix={`${index + 1}`} depth={0}
+                totalSiblings={data.tree.length} onMove={handleMove}
                 onAdd={openCreateChild} onEdit={openEdit} onDelete={handleDeleteDepartamento}
                 onAsignarPuesto={handleOpenCrearPuesto} onEditPuesto={handleOpenEditarPuesto} onDeletePuesto={handleDeletePuesto}
                 onAssignUserToPuesto={handleOpenAssignUser}
@@ -376,15 +476,15 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
             <div className="p-6 space-y-6 bg-white dark:bg-zinc-900">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                   Nombre del Departamento
+                  Nombre del Departamento
                 </label>
-                <input 
-                  value={nombre} 
-                  onChange={(e) => setNombre(e.target.value)} 
-                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500/50 outline-none transition-all" 
-                  placeholder="" 
-                  autoFocus 
-                  onKeyDown={e => e.key === 'Enter' && handleSave()} 
+                <input
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  className="w-full bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-white p-3 rounded-lg focus:ring-2 focus:ring-purple-500/50 outline-none transition-all"
+                  placeholder=""
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && handleSave()}
                 />
               </div>
               {mode === "editar" && (
@@ -408,8 +508,8 @@ export default function ListDepartamentos({ initialData }: { initialData: Depart
             </div>
 
             <div className="px-6 py-4 bg-zinc-50 dark:bg-zinc-950/50 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2">
-              <button 
-                onClick={handleSave} 
+              <button
+                onClick={handleSave}
                 className="px-6 py-2 rounded-lg text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-md active:scale-95 shadow-purple-900/10 dark:shadow-purple-900/20"
               >
                 Confirmar

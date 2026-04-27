@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  getDepartamentos, 
-  createDepartamento, 
-  updateDepartamento, 
+import {
+  getDepartamentos,
+  createDepartamento,
+  updateDepartamento,
   deleteDepartamento,
-  getCandidatosJefatura, 
-  asignarJefeDepartamento
+  getCandidatosJefatura,
+  asignarJefeDepartamento,
+  swapDepartamentoOrden,
+  shiftDepartamentoOrden
 } from "./action";
 import { DepartamentoFormValues, DepartamentoRow, DepartamentoNode } from "./schemas";
 
@@ -15,10 +17,10 @@ export function useDepartamentos(initialData?: DepartamentoRow[]) {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: async () => await getDepartamentos(),
-    initialData: initialData, 
-    staleTime: 1000 * 60 * 6, 
-    gcTime: 1000 * 60 * 10,   
-    
+    initialData: initialData,
+    staleTime: 1000 * 60 * 6,
+    gcTime: 1000 * 60 * 10,
+
     select: (data: DepartamentoRow[]) => {
       const buildTree = (items: DepartamentoRow[]): DepartamentoNode[] => {
         const itemMap = new Map<string, DepartamentoNode>();
@@ -67,19 +69,19 @@ export function useCreateDepartamento() {
   });
 }
 
-export function useUpdateDepartamento() { 
+export function useUpdateDepartamento() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, values }: { id: string; values: DepartamentoFormValues }) => {
-       const res = await updateDepartamento(id, values);
-       if (res.error) throw new Error(res.error);
-       return res.data;
+      const res = await updateDepartamento(id, values);
+      if (res.error) throw new Error(res.error);
+      return res.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY })
   });
 }
 
-export function useDeleteDepartamento() { 
+export function useDeleteDepartamento() {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -102,7 +104,7 @@ export function useCandidatosJefatura() {
       if (res.error) throw new Error(res.error);
       return res.data;
     },
-    staleTime: 1000 * 60 * 5, 
+    staleTime: 1000 * 60 * 5,
   });
 }
 
@@ -117,6 +119,36 @@ export function useAsignarJefe() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["departamentos"] });
+    }
+  });
+}
+
+export function useSwapDepartamento() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id1, orden1, id2, orden2 }: { id1: string; orden1: number; id2: string; orden2: number }) => {
+      const res = await swapDepartamentoOrden(id1, orden1, id2, orden2);
+      if (res.error) throw new Error(res.error);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    }
+  });
+}
+
+export function useShiftDepartamento() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, parentId, oldOrden, newOrden }: { id: string; parentId: string | null; oldOrden: number; newOrden: number }) => {
+      const res = await shiftDepartamentoOrden(id, parentId, oldOrden, newOrden);
+      if (res.error) throw new Error(res.error);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     }
   });
 }

@@ -6,21 +6,21 @@ import { revalidatePath } from "next/cache";
 
 export async function getDepartamentos() {
   const supabase = await createClient();
-  
+
   const { data: deptos, error: deptoError } = await supabase
     .from("departamento")
-    .select("*") 
+    .select("*")
     .order("orden", { ascending: true });
 
   if (deptoError) throw new Error(deptoError.message);
   if (!deptos || deptos.length === 0) return [];
 
   const { data: puestosData, error: puestosError } = await supabase
-  .from("puesto")
-  .select("*")
-  .order("es_jefatura", { ascending: false }) 
-  .order("nombre", { ascending: true });      
-    
+    .from("puesto")
+    .select("*")
+    .order("es_jefatura", { ascending: false })
+    .order("nombre", { ascending: true });
+
   if (puestosError) throw new Error(puestosError.message);
   const puestos = puestosData || [];
 
@@ -47,7 +47,7 @@ export async function getDepartamentos() {
   const deptosCompletos = deptos.map(depto => {
     const jefe = depto.jefe_id ? profiles.find(pr => pr.id === depto.jefe_id) || null : null;
     const puestosDelDepto = puestosConUsuarios.filter(p => p.departamento_id === depto.id);
-    
+
     return {
       ...depto,
       jefe,
@@ -60,7 +60,7 @@ export async function getDepartamentos() {
 
 export async function createDepartamento(values: DepartamentoFormValues) {
   const result = departamentoSchema.safeParse(values);
-  
+
   if (!result.success) {
     return { error: "Datos inválidos" };
   }
@@ -91,7 +91,7 @@ export async function createDepartamento(values: DepartamentoFormValues) {
     .from("departamento")
     .insert({
       nombre: result.data.nombre,
-      parent_id: result.data.parent_id || null, 
+      parent_id: result.data.parent_id || null,
       jefe_id: result.data.jefe_id || null,
       orden: ordenFinal,
     })
@@ -99,7 +99,7 @@ export async function createDepartamento(values: DepartamentoFormValues) {
     .single();
 
   if (error) return { error: error.message };
-  
+
   revalidatePath("/administracion/gestion/departamento");
   return { success: true, data };
 }
@@ -163,7 +163,7 @@ export async function deleteDepartamento(id: string) {
 
 export async function getCandidatosJefatura() {
   const supabase = await createClient();
-  
+
   const { data, error } = await supabase
     .from("profiles")
     .select("id, nombre, rol, email, avatar_url")
@@ -176,14 +176,95 @@ export async function getCandidatosJefatura() {
 
 export async function asignarJefeDepartamento(departamentoId: string, jefeId: string | null) {
   const supabase = await createClient();
-  
+
   const { error } = await supabase
     .from("departamento")
     .update({ jefe_id: jefeId })
     .eq("id", departamentoId);
 
   if (error) return { error: error.message };
-  
+
+  revalidatePath("/administracion/gestion/departamento");
+  return { success: true };
+}
+
+export async function swapDepartamentoOrden(
+  id1: string,
+  orden1: number,
+  id2: string,
+  orden2: number
+) {
+  const supabase = await createClient();
+
+  // 1. Set id1 to a temporary negative order
+  const { error: err1 } = await supabase
+    .from("departamento")
+    .update({ orden: -1 })
+    .eq("id", id1);
+
+  if (err1) return { error: err1.message };
+
+  // 2. Set id2 to its new order (orden2)
+  const { error: err2 } = await supabase
+    .from("departamento")
+    .update({ orden: orden2 })
+    .eq("id", id2);
+
+  if (err2) return { error: err2.message };
+
+  // 3. Set id1 to its final new order (orden1)
+  const { error: err3 } = await supabase
+    .from("departamento")
+    .update({ orden: orden1 })
+    .eq("id", id1);
+
+  if (err3) return { error: err3.message };
+
+  revalidatePath("/administracion/gestion/departamento");
+  return { success: true };
+}
+
+export async function shiftDepartamentoOrden(
+  id: string,
+  parentId: string | null,
+  oldOrden: number,
+  newOrden: number
+) {
+  const supabase = await createClient();
+
+  const query = supabase.from("departamento").select("id, orden");
+  if (parentId) {
+    query.eq("parent_id", parentId);
+  } else {
+    query.is("parent_id", null);
+  }
+
+  const { data: siblings, error: sibError } = await query;
+  if (sibError || !siblings) return { error: sibError?.message || "Error al obtener departamentos" };
+
+  // 1. Temp order
+  await supabase.from("departamento").update({ orden: -1 }).eq("id", id);
+
+  const updates: PromiseLike<any>[] = [];
+
+  if (newOrden < oldOrden) {
+    const affected = siblings.filter(s => s.orden >= newOrden && s.orden < oldOrden && s.id !== id);
+    for (const sib of affected) {
+      updates.push(supabase.from("departamento").update({ orden: sib.orden + 1 }).eq("id", sib.id));
+    }
+  } else if (newOrden > oldOrden) {
+    const affected = siblings.filter(s => s.orden > oldOrden && s.orden <= newOrden && s.id !== id);
+    for (const sib of affected) {
+      updates.push(supabase.from("departamento").update({ orden: sib.orden - 1 }).eq("id", sib.id));
+    }
+  }
+
+  await Promise.all(updates);
+
+  // 2. Final order
+  const { error } = await supabase.from("departamento").update({ orden: newOrden }).eq("id", id);
+  if (error) return { error: error.message };
+
   revalidatePath("/administracion/gestion/departamento");
   return { success: true };
 }
